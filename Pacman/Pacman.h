@@ -1,4 +1,6 @@
 #pragma once
+#define TILE_SIZE 32
+#define MAX_ELEMENTS 644
 
 // If Windows and not in Debug, this will run without a console window
 // You can use this to output information when debugging using cout or cerr
@@ -14,15 +16,54 @@
 // Reduces the amount of typing by including all classes in S2D namespace
 using namespace S2D;
 
-struct Player {
-	// Data to represent a player
-	const float _cSpeed = .15;
-	Vector2* _Position;
-	Rect* _SourceRect;
-	Texture2D* _Texture;
-	int _moveMouth;
+enum Movement {
+	mLEFT = 0,
+	mRIGHT,
+	mUP,
+	mDOWN,
+	mSTOP
 };
 
+enum Direction {
+	dRIGHT = 0,
+	dDOWN,
+	dLEFT,
+	dUP
+};
+
+// Data to represent a player
+struct Player {
+	Rect* sourceRect;
+	Texture2D* texture;
+	int frame; 
+	int currentFrametime;
+	Direction facing;
+
+	Vector2* position;
+	Vector2* direction;
+	Movement nextMove;
+	Movement currMove;
+	Movement lastMove;
+	float speed;
+
+	int score;
+};
+
+// every element that requires basic representation
+struct Entity {
+	Texture2D* texture;
+	Rect* 
+};
+
+// any element that pacman has to negotiate ie walls and doors
+struct Obstacle {
+
+};
+
+// any element that can harm pacman ie traps and ghosts
+struct Hazard {
+
+};
 struct Collectable {
 	//data for collectables
 	Vector2* _Position;

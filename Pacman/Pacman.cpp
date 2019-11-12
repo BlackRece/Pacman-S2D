@@ -151,7 +151,7 @@ void Pacman::DeletePlayer(Player *obj) {
 	delete obj->direction;
 }
 
-void Pacman::DeleteEntity(entity* obj) {
+void Pacman::DeleteEntity(Entity* obj) {
 	delete obj->posRect; 
 	delete obj->sourceRect;
 }
