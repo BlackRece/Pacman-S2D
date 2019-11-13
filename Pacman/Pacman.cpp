@@ -1,9 +1,11 @@
 #include "Pacman.h"
 #include <sstream>
+#include <fstream>
 #include <iostream>
 #include <math.h>
 
-Pacman::Pacman(int argc, char* argv[]) : Game(argc, argv), _cPacmanFrameTime(250)
+Pacman::Pacman(int argc, char* argv[]) : 
+	Game(argc, argv), _cPacmanSpeed(0.1f), _cPacmanFrameTime(250)
 {
 	_frameCount = 0;
 
@@ -16,109 +18,51 @@ Pacman::Pacman(int argc, char* argv[]) : Game(argc, argv), _cPacmanFrameTime(250
 	//_pacman->sourceRect = new Rect(3.0f, 3.0f, 27, 27);
 	_pacman->sourceRect = new Rect(0.0f, 0.0f, 32, 32);
 	_pacman->direction = new Vector2(0.0f, 0.0f);
-	_pacman->currentMove = Movement::mSTOP;
+	_pacman->currMove = Movement::mSTOP;
 	_pacman->nextMove = Movement::mSTOP;
 	_pacman->lastMove = Movement::mSTOP;
 	_pacman->facing = Direction::dLEFT;
-	_pacman->speed = 0.15f;
+	_pacman->speed = _cPacmanSpeed;
 	_pacman->score = 0;
 
 	// initialise walls
 	_wallTexture = new Texture2D();
-	_wallCounter = 0;
+	//_wallCounter = 0;
 	_wallScale = 1.0f;
 
 	// initialise munchies
 	_munchieTexture = new Texture2D();
-	_munchieCounter = 0;
+	//_munchieCounter = 0;
 	
-	for (int row = 0; row < map.size(); row++) {
-		for (int col = 0; col < map[row].size(); col++) {
-			switch(map.at(row).at(col)){
-			case 'P':
-				//place pacman
-				_pacman->position = new Vector2(
-					col * TILE_SIZE,
-					row * TILE_SIZE
-				);
-				break;
-			case '+':
-			case '.':
-				//all munchies
-				_munchies[_munchieCounter] = new entity();
-				_munchies[_munchieCounter]->sourceRect = new Rect(0.0f, 0.0f, 11, 11);
-				_munchies[_munchieCounter]->posRect = new Rect(
-					(col ) * TILE_SIZE, 
-					(row ) * TILE_SIZE,
-					12, 12
-				);
-				
-				_munchies[_munchieCounter]->isEaten = false;
+	// initialise menu and pause states
+	// pause
+	_pause = new Menu;
+	_pause->_backGround = new Texture2D;
+	_pause->_rect = new Rect(0.0f, 0.0f, WWIDTH, WHEIGHT);
+	_pause->_textRect = new Rect(
+		WWIDTH / 4.0f,
+		(WHEIGHT / 2.0f) + 50.0f,
+		WWIDTH / 2.0f,
+		100.0f);
+	_pause->_keyDown = false;
+	_pause->_stringPosition = new Vector2(WWIDTH / 2.3f,
+		(WHEIGHT / 2.0f) + 100.0f);
 
-				//power munchies
-				if (map.at(row).at(col) == '+') {
-					_munchies[_munchieCounter]->isPowerPellet = true;
-					_munchies[_munchieCounter]->value = 50;
-					_munchies[_munchieCounter]->scale = 2.0f;
-					_munchies[_munchieCounter]->offset = (TILE_SIZE / 2) / _munchies[_munchieCounter]->scale;
-					
-				} else {
-					_munchies[_munchieCounter]->isPowerPellet = false;
-					_munchies[_munchieCounter]->value = 10;
-					_munchies[_munchieCounter]->scale = 1.0f;
-					_munchies[_munchieCounter]->offset = TILE_SIZE / 2;
-				}
-
-				//center munchie
-				_munchies[_munchieCounter]->posRect->X +=
-					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->posRect->Width / 2;
-				_munchies[_munchieCounter]->posRect->Y +=
-					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->posRect->Height / 2;
-
-				_munchieCounter++;
-				break;
-			case '#':
-				_walls[_wallCounter] = new Obstacle();
-				_walls[_wallCounter]->sourceRect = new Rect(0.0f, 0.0f, TILE_SIZE, TILE_SIZE);
-				_walls[_wallCounter]->posRect = new Rect(
-					(col ) * TILE_SIZE,
-					(row )* TILE_SIZE, 
-					TILE_SIZE, TILE_SIZE
-				);
-				_walls[_wallCounter]->canGhostsPass = false;
-				_walls[_wallCounter]->canGhostsSpawn = false;
-				_walls[_wallCounter]->canPlayerPass = false;
-				_walls[_wallCounter]->canPlayerSpawn = false;
-				_walls[_wallCounter]->canBonusSpawn = false;
-
-				_wallCounter++;
-				break;
-			default:
-				break;
-			} 
-		}
-	}
-	
-	//DEBUG
-	cout << "munchie number = " << _munchieCounter << endl;
-	cout << "_munchies[_munchieCounter]->rect;" <<
-		"\n     X: " << _munchies[_munchieCounter-1]->posRect->X <<
-		"\n     Y: " << _munchies[_munchieCounter-1]->posRect->Y <<
-		"\nHeight: " << _munchies[_munchieCounter-1]->posRect->Height <<
-		"\n Width: " << _munchies[_munchieCounter-1]->posRect->Width << endl << endl;
-	cout << "wall number = " << _wallCounter << endl;
-	cout << "_walls[_wallCounter]->rect;" <<
-		"\n     X: " << _walls[_wallCounter - 1]->posRect->X <<
-		"\n     Y: " << _walls[_wallCounter - 1]->posRect->Y <<
-		"\nHeight: " << _walls[_wallCounter - 1]->posRect->Height <<
-		"\n Width: " << _walls[_wallCounter - 1]->posRect->Width << endl;
-
-	_paused = true;
-	_pKeyDown = false;
-	_mainMenu = true;
+	_start = new Menu;
+	_start->_backGround = new Texture2D;
+	_start->_rect = new Rect(0.0f, 0.0f, WWIDTH, WHEIGHT);
+	_start->_textRect = new Rect(
+		WWIDTH / 4.0f,
+		(WHEIGHT / 2.0f) + 50.0f,
+		WWIDTH / 2.0f,
+		100.0f);
+	_start->_keyDown = false;
+	_start->_stringPosition = new Vector2(WWIDTH/ 2.3f,
+		(WHEIGHT/ 2.0f) + 100.0f);
+	//_mainMenu = true;
 
 	//Initialise important Game aspects
-	Graphics::Initialise(argc, argv, this, _wWidth, _wHeight, false, 25, 25, "Pacman", 60);
+	Graphics::Initialise(argc, argv, this, WWIDTH, WHEIGHT, false, 25, 25, "Pacman", 60);
 	Input::Initialise();
 
 	// Start the Game Loop - This calls Update and Draw in game loop
@@ -130,39 +74,71 @@ Pacman::~Pacman()
 	DeletePlayer(_pacman);
 	delete _pacman;
 
-	for (int i = 0; i < _munchieCounter; i++) {
+	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
 		DeleteEntity(_munchies[i]);
 	}
 	delete _munchies;
 	delete _munchieTexture;
 	
-	for (int i = 0; i < _wallCounter; i++) {
+	for (int i = 0; i < NUM_OF_WALLS; i++) {
 		DeleteObstacle(_walls[i]);
 	}
 	delete _walls;
 	delete _wallTexture;
+
+	DeleteEntity(&_cherry->self);
+	delete _cherry;
+
+	DeleteEntity(&_powerUp->self);
+	delete _powerUp;
+
+	DeleteMenu(&_pause);
+	delete _pause;
+
+	DeleteMenu(&_start);
+	delete _start;
 }
 
-void Pacman::DeletePlayer(Player *obj) {
+void Pacman::DeleteEntity(Entity* obj)
+{
+	delete obj->position;
+	delete obj->sourceRect;
+	delete obj->texture;
+}
+
+void Pacman::DeletePlayer(Player* obj) {
 	delete obj->texture;
 	delete obj->position;
-	//delete obj->rect;
 	delete obj->sourceRect;
 	delete obj->direction;
 }
 
-void Pacman::DeleteEntity(Entity* obj) {
-	delete obj->posRect; 
+void Pacman::DeleteSelf(Entity* obj) {
+	delete obj->position;
 	delete obj->sourceRect;
+	delete obj->texture;
+}
+
+void Pacman::DeleteMunchie(Munchie* obj) {
+	DeleteEntity(&obj->self);
+}
+
+void Pacman::DeleteMenu(Menu* obj) {
+	delete obj->_backGround;
+	delete obj->_rect;
+	delete obj->_textRect;
+	delete obj->_stringPosition;
 }
 
 void Pacman::DeleteObstacle(Obstacle* obj) {
-	delete obj->posRect;
-	delete obj->sourceRect;
+	DeleteEntity(&obj->self);
 }
 
 void Pacman::LoadContent()
 {
+	// Load Map
+	LoadMap();
+
 	// Load Pacman
 	_pacman->texture->Load("Textures/Pacman.tga", false);
 
@@ -172,17 +148,9 @@ void Pacman::LoadContent()
 	// Load Walls
 	_wallTexture->Load("Textures/wallTile.tga", true);
 
-	// Set Menu Parameters
-	_menuBackGround = new Texture2D();
-	_menuBackGround->Load("Textures/Transparency.png", false);
-	_menuRectangle = new Rect(0.0f, 0.0f, _wWidth, _wHeight);
-	_menuTextRect = new Rect(
-		_wWidth / 4.0f,
-		(_wHeight / 2.0f) + 50.0f,
-		_wWidth / 2.0f,
-		100.0f);
-	_menuStringPosition = new Vector2(_wWidth / 2.3f,
-		(_wHeight / 2.0f) + 100.0f);
+	// Load Menu Images
+	_pause->_backGround->Load("Textures/Transparency.png", false);
+	_start->_backGround->Load("Textures/Transparency.png", false);
 	
 	/* TODO
 	 * ====
@@ -202,6 +170,116 @@ void Pacman::LoadContent()
 	_stringDirection = new Vector2(10.0f, 50.0f);
 	_stringScore = new Vector2(10.0f, 75.0f);
 	
+}
+
+void Pacman::LoadMap() {
+	string mapString = "level_0.txt";
+	std::ifstream mapFile(mapString);
+
+	string rawRow = "";
+	int rowCount = 0;
+
+	if (mapFile.is_open) {
+		while (getline(mapFile, rawRow)) {
+			if (rowCount > MAP_ROWS) {
+				cout << "Level too big - too many rows!!" << endl;
+				mapFile.close();
+				exit(-1);
+			}
+
+			for (int i = 0; i < rawRow.length; i++) {
+				map[rowCount][i] = rawRow.at(i);
+			}
+
+			rowCount++;
+		}
+	}
+}
+
+void Pacman::InitialiseMap() {
+	for (int row = 0; row < map.size(); row++) {
+		for (int col = 0; col < map[row].size(); col++) {
+			switch (map.at(row).at(col)) {
+			case 'P':
+				//place pacman
+				_pacman->position = new Vector2(
+					col * TILE_SIZE,
+					row * TILE_SIZE
+				);
+				break;
+			case '+':
+			case '.':
+				//all munchies
+				_munchies[_munchieCounter] = new Entity();
+				_munchies[_munchieCounter]->sourceRect = new Rect(0.0f, 0.0f, 11, 11);
+				_munchies[_munchieCounter]->posRect = new Rect(
+					(col)*TILE_SIZE,
+					(row)*TILE_SIZE,
+					12, 12
+				);
+
+				_munchies[_munchieCounter]->isEaten = false;
+
+				//power munchies
+				if (map.at(row).at(col) == '+') {
+					_munchies[_munchieCounter]->isPowerPellet = true;
+					_munchies[_munchieCounter]->value = 50;
+					_munchies[_munchieCounter]->scale = 2.0f;
+					_munchies[_munchieCounter]->offset = (TILE_SIZE / 2) / _munchies[_munchieCounter]->scale;
+
+				}
+				else {
+					_munchies[_munchieCounter]->isPowerPellet = false;
+					_munchies[_munchieCounter]->value = 10;
+					_munchies[_munchieCounter]->scale = 1.0f;
+					_munchies[_munchieCounter]->offset = TILE_SIZE / 2;
+				}
+
+				//center munchie
+				_munchies[_munchieCounter]->posRect->X +=
+					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->posRect->Width / 2;
+				_munchies[_munchieCounter]->posRect->Y +=
+					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->posRect->Height / 2;
+
+				_munchieCounter++;
+				break;
+			case '#':
+				_walls[_wallCounter] = new Obstacle();
+				_walls[_wallCounter]->self = Entity();
+				_walls[_wallCounter]->self.sourceRect = new Rect(0.0f, 0.0f, TILE_SIZE, TILE_SIZE);
+				_walls[_wallCounter]->self.position = new Rect(
+					(col)*TILE_SIZE,
+					(row)*TILE_SIZE,
+					TILE_SIZE, TILE_SIZE
+				);
+				_walls[_wallCounter]->canGhostsPass = false;
+				_walls[_wallCounter]->canGhostsSpawn = false;
+				_walls[_wallCounter]->canPlayerPass = false;
+				_walls[_wallCounter]->canPlayerSpawn = false;
+				_walls[_wallCounter]->canBonusSpawn = false;
+
+				_wallCounter++;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	//DEBUG
+	cout << "munchie number = " << _munchieCounter << endl;
+	cout << "_munchies[_munchieCounter]->rect;" <<
+		"\n     X: " << _munchies[_munchieCounter - 1]->posRect->X <<
+		"\n     Y: " << _munchies[_munchieCounter - 1]->posRect->Y <<
+		"\nHeight: " << _munchies[_munchieCounter - 1]->posRect->Height <<
+		"\n Width: " << _munchies[_munchieCounter - 1]->posRect->Width << endl << endl;
+	cout << "wall number = " << _wallCounter << endl;
+	cout << "_walls[_wallCounter]->rect;" <<
+		"\n     X: " << _walls[_wallCounter - 1]->posRect->X <<
+		"\n     Y: " << _walls[_wallCounter - 1]->posRect->Y <<
+		"\nHeight: " << _walls[_wallCounter - 1]->posRect->Height <<
+		"\n Width: " << _walls[_wallCounter - 1]->posRect->Width << endl;
+
 }
 
 void Pacman::Update(int elapsedTime) {
