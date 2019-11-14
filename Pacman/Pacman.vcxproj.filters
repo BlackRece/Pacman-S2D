@@ -28,8 +28,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="level_0.txt">
-      <Filter>Resource Files</Filter>
-    </Text>
+    <Text Include="level_0.txt" />
   </ItemGroup>
 </Project>

@@ -21,6 +21,11 @@
 // Reduces the amount of typing by including all classes in S2D namespace
 using namespace S2D;
 
+struct Vector2i {
+	int X;
+	int Y;
+};
+
 enum Movement {
 	mLEFT = 0,
 	mRIGHT,
@@ -33,7 +38,8 @@ enum Direction {
 	dRIGHT = 0,
 	dDOWN,
 	dLEFT,
-	dUP
+	dUP,
+	dNULL
 };
 
 // Data to represent a player
@@ -141,7 +147,7 @@ private:
 	Player* _pacman;
 
 	//data to represent munchies
-	Entity* _munchies[NUM_OF_MUNCHIES];
+	Munchie* _munchies[NUM_OF_MUNCHIES];
 	Texture2D* _munchieTexture;
 	//int _munchieCounter;
 
@@ -165,9 +171,13 @@ private:
 
 	void Input(int elapsedTime, Input::KeyboardState* state);
 
-	void CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey);
+	void CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey, Input::Keys startKey);
 
-	void CheckViewPortCollision();
+	void CheckPacmanCollision();
+
+
+
+	void CheckViewportCollision();
 
 	void CheckStart(Input::KeyboardState* state, Input::Keys startKey);
 
@@ -175,7 +185,7 @@ private:
 	
 	void DeleteEntity(Entity* obj);
 
-	void DeleteMenu(Menu obj);
+	void DeleteMenu(Menu* obj);
 
 	void DeleteObstacle(Obstacle* obj);
 
@@ -185,7 +195,17 @@ private:
 
 	void DeleteMunchie(Munchie* obj);
 	
+	std::string GetMovementString(Movement movement);
+
+	bool HasHitWall(Rect* target, bool isPlayer, float targetTolerance = 0, float wallTolerance = 0);
+
+	bool HasTargetHitObject(Rect* git, Rect* obj, float tolerance = 0, char mode = 'c');
+
 	void UpdatePacman(int elapsedTime);
+
+	Direction IsFacing(Movement movement);
+
+	Vector2 WillHitWall(Rect* target, Movement targetMove, float targetSpd);
 
 	void UpdateMunchie(int elapsedTime);
 
@@ -208,7 +228,11 @@ public:
 	void LoadMap();
 	
 	/// <summary> Called once to initialise map elements from loaded map array. </summary>
-	void InitialiseMap();
+	void InitialiseMunchies();
+
+	void InitialiseWalls();
+
+	void DefineMap();
 
 	/// <summary> Called every frame - update game logic here. </summary>
 	void virtual Update(int elapsedTime);

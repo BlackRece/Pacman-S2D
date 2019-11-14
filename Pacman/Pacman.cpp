@@ -4,6 +4,8 @@
 #include <iostream>
 #include <math.h>
 
+using namespace std;
+
 Pacman::Pacman(int argc, char* argv[]) : 
 	Game(argc, argv), _cPacmanSpeed(0.1f), _cPacmanFrameTime(250)
 {
@@ -29,10 +31,12 @@ Pacman::Pacman(int argc, char* argv[]) :
 	_wallTexture = new Texture2D();
 	//_wallCounter = 0;
 	_wallScale = 1.0f;
+	Obstacle* _walls[NUM_OF_WALLS] = { nullptr };
 
 	// initialise munchies
 	_munchieTexture = new Texture2D();
 	//_munchieCounter = 0;
+	Munchie* _munchies[NUM_OF_MUNCHIES] = { nullptr };
 	
 	// initialise menu and pause states
 	// pause
@@ -47,6 +51,7 @@ Pacman::Pacman(int argc, char* argv[]) :
 	_pause->_keyDown = false;
 	_pause->_stringPosition = new Vector2(WWIDTH / 2.3f,
 		(WHEIGHT / 2.0f) + 100.0f);
+	_pause->text = "_.-| P A U S E D |-._";
 
 	_start = new Menu;
 	_start->_backGround = new Texture2D;
@@ -59,6 +64,7 @@ Pacman::Pacman(int argc, char* argv[]) :
 	_start->_keyDown = false;
 	_start->_stringPosition = new Vector2(WWIDTH/ 2.3f,
 		(WHEIGHT/ 2.0f) + 100.0f);
+	_start->text = "_. - | Press SPACE BAR to start | -._";
 	//_mainMenu = true;
 
 	//Initialise important Game aspects
@@ -75,7 +81,7 @@ Pacman::~Pacman()
 	delete _pacman;
 
 	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
-		DeleteEntity(_munchies[i]);
+		DeleteMunchie(_munchies[i]);
 	}
 	delete _munchies;
 	delete _munchieTexture;
@@ -92,10 +98,10 @@ Pacman::~Pacman()
 	DeleteEntity(&_powerUp->self);
 	delete _powerUp;
 
-	DeleteMenu(&_pause);
+	DeleteMenu(_pause);
 	delete _pause;
 
-	DeleteMenu(&_start);
+	DeleteMenu(_start);
 	delete _start;
 }
 
@@ -179,27 +185,81 @@ void Pacman::LoadMap() {
 	string rawRow = "";
 	int rowCount = 0;
 
-	if (mapFile.is_open) {
-		while (getline(mapFile, rawRow)) {
+	//DEBUG
+	string tmpArray[MAP_ROWS];
+
+	if (mapFile.is_open()) {
+		while (getline(mapFile, rawRow, '\n')) {
+
 			if (rowCount > MAP_ROWS) {
 				cout << "Level too big - too many rows!!" << endl;
 				mapFile.close();
 				exit(-1);
 			}
 
-			for (int i = 0; i < rawRow.length; i++) {
-				map[rowCount][i] = rawRow.at(i);
+			//DEBUG
+			tmpArray[rowCount] = rawRow;
+
+			for (int i = 0; i < MAP_COLS; i++) {
+				
+				if (rawRow.length() > MAP_COLS) {
+					cout << "ROW Exceeds " << MAP_COLS <<
+						" (" << rawRow.length() << ")" << endl;
+				}
+				if (rawRow.length() > i) {
+					map[rowCount][i] = (char)rawRow.at(i);
+				}
 			}
 
 			rowCount++;
+
+			rawRow.clear();
 		}
+	}
+
+	InitialiseMunchies();
+	InitialiseWalls();
+	DefineMap();
+}
+
+void Pacman::InitialiseMunchies() {
+	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
+		//all munchies
+		_munchies[i] = new Munchie();
+		_munchies[i]->self = Entity();
+		_munchies[i]->self.sourceRect = new Rect();
+		_munchies[i]->self.position = new Rect();
+		_munchies[i]->self.texture = new Texture2D();
+		_munchies[i]->isEaten = false;
+		_munchies[i]->isPowerPellet = false;
+		_munchies[i]->value = 0;
+		_munchies[i]->scale = 0;
+		_munchies[i]->offset = 0;
 	}
 }
 
-void Pacman::InitialiseMap() {
-	for (int row = 0; row < map.size(); row++) {
-		for (int col = 0; col < map[row].size(); col++) {
-			switch (map.at(row).at(col)) {
+void Pacman::InitialiseWalls() {
+	for (int i = 0; i < NUM_OF_WALLS; i++) {
+		_walls[i] = new Obstacle();
+		_walls[i]->self = Entity();
+		_walls[i]->self.position = new Rect();
+		_walls[i]->self.sourceRect = new Rect();
+		_walls[i]->self.texture = new Texture2D();
+		_walls[i]->canBonusSpawn = false;
+		_walls[i]->canGhostsPass = false;
+		_walls[i]->canGhostsSpawn = false;
+		_walls[i]->canPlayerPass = false;
+		_walls[i]->canPlayerSpawn = false;
+	}
+}
+
+void Pacman::DefineMap() {
+	int _munchieCounter = 0;
+	int _wallCounter = 0;
+
+	for (int row = 0; row < MAP_ROWS; row++) {
+		for (int col = 0; col < MAP_COLS; col++) {
+			switch (map[row][col]) {
 			case 'P':
 				//place pacman
 				_pacman->position = new Vector2(
@@ -210,9 +270,10 @@ void Pacman::InitialiseMap() {
 			case '+':
 			case '.':
 				//all munchies
-				_munchies[_munchieCounter] = new Entity();
-				_munchies[_munchieCounter]->sourceRect = new Rect(0.0f, 0.0f, 11, 11);
-				_munchies[_munchieCounter]->posRect = new Rect(
+				_munchies[_munchieCounter] = new Munchie();
+				_munchies[_munchieCounter]->self = Entity();
+				_munchies[_munchieCounter]->self.sourceRect = new Rect(0.0f, 0.0f, 11, 11);
+				_munchies[_munchieCounter]->self.position = new Rect(
 					(col)*TILE_SIZE,
 					(row)*TILE_SIZE,
 					12, 12
@@ -221,7 +282,7 @@ void Pacman::InitialiseMap() {
 				_munchies[_munchieCounter]->isEaten = false;
 
 				//power munchies
-				if (map.at(row).at(col) == '+') {
+				if (map[row][col] == '+') {
 					_munchies[_munchieCounter]->isPowerPellet = true;
 					_munchies[_munchieCounter]->value = 50;
 					_munchies[_munchieCounter]->scale = 2.0f;
@@ -236,10 +297,10 @@ void Pacman::InitialiseMap() {
 				}
 
 				//center munchie
-				_munchies[_munchieCounter]->posRect->X +=
-					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->posRect->Width / 2;
-				_munchies[_munchieCounter]->posRect->Y +=
-					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->posRect->Height / 2;
+				_munchies[_munchieCounter]->self.position->X +=
+					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->self.position->Width / 2;
+				_munchies[_munchieCounter]->self.position->Y +=
+					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->self.position->Height / 2;
 
 				_munchieCounter++;
 				break;
@@ -269,16 +330,16 @@ void Pacman::InitialiseMap() {
 	//DEBUG
 	cout << "munchie number = " << _munchieCounter << endl;
 	cout << "_munchies[_munchieCounter]->rect;" <<
-		"\n     X: " << _munchies[_munchieCounter - 1]->posRect->X <<
-		"\n     Y: " << _munchies[_munchieCounter - 1]->posRect->Y <<
-		"\nHeight: " << _munchies[_munchieCounter - 1]->posRect->Height <<
-		"\n Width: " << _munchies[_munchieCounter - 1]->posRect->Width << endl << endl;
+		"\n     X: " << _munchies[_munchieCounter - 1]->self.position->X <<
+		"\n     Y: " << _munchies[_munchieCounter - 1]->self.position->Y <<
+		"\nHeight: " << _munchies[_munchieCounter - 1]->self.position->Height <<
+		"\n Width: " << _munchies[_munchieCounter - 1]->self.position->Width << endl << endl;
 	cout << "wall number = " << _wallCounter << endl;
 	cout << "_walls[_wallCounter]->rect;" <<
-		"\n     X: " << _walls[_wallCounter - 1]->posRect->X <<
-		"\n     Y: " << _walls[_wallCounter - 1]->posRect->Y <<
-		"\nHeight: " << _walls[_wallCounter - 1]->posRect->Height <<
-		"\n Width: " << _walls[_wallCounter - 1]->posRect->Width << endl;
+		"\n     X: " << _walls[_wallCounter - 1]->self.position->X <<
+		"\n     Y: " << _walls[_wallCounter - 1]->self.position->Y <<
+		"\nHeight: " << _walls[_wallCounter - 1]->self.position->Height <<
+		"\n Width: " << _walls[_wallCounter - 1]->self.position->Width << endl;
 
 }
 
@@ -292,11 +353,11 @@ void Pacman::Update(int elapsedTime) {
 	*/
 
 	/* PACMAN UPDATE */
-	std::cout << "elapsedTime : " << elapsedTime << "ms" << std::endl;
+	cout << "elapsedTime : " << elapsedTime << "ms" << std::endl;
 	Input::KeyboardState* keyboardState = Input::Keyboard::GetState();
 	CheckPaused(keyboardState, Input::Keys::P, Input::Keys::SPACE);
 
-	if (!_paused) {
+	if (!_pause->_menu || !_start->_menu) {
 		Input(elapsedTime, keyboardState);
 		UpdatePacman(elapsedTime);
 		UpdateMunchie(elapsedTime);
@@ -320,7 +381,7 @@ void Pacman::Draw(int elapsedTime) {
 	stream << "Pacman X: " << _pacman->position->X << " Y: " << _pacman->position->Y;
 	//streamDirection << "Direction X: " << _pacman->direction->X << " Y: " << _pacman->direction->Y;
 	streamDirection << "LastMovement: " << GetMovementString(_pacman->lastMove) <<
-		"CurrentMovement: " << GetMovementString(_pacman->currentMove) <<
+		"CurrentMovement: " << GetMovementString(_pacman->currMove) <<
 		" NextMovement: " << GetMovementString(_pacman->nextMove);
 	streamScore << "Score : " << _pacman->score;
 
@@ -330,15 +391,27 @@ void Pacman::Draw(int elapsedTime) {
 	SpriteBatch::Draw(_pacman->texture, _pacman->position, _pacman->sourceRect); 
 
 	// Draws Munchies
-	for (int i = 0; i < _munchieCounter; i++) {
+	for (int i = 0; i < NUM_OF_MUNCHIES - 1; i++) {
 		if (!_munchies[i]->isEaten) {
-			SpriteBatch::Draw(_munchieTexture, _munchies[i]->posRect, _munchies[i]->sourceRect, Vector2::Zero, _munchies[i]->scale, 0.0f, Color::White, SpriteEffect::NONE);
+			SpriteBatch::Draw(
+				_munchieTexture,
+				_munchies[i]->self.position,
+				_munchies[i]->self.sourceRect,
+				Vector2::Zero,
+				_munchies[i]->scale,
+				0.0f, Color::White, SpriteEffect::NONE);
 		}
 	}
 
 	// Draw Walls
-	for (int i = 0; i < _wallCounter; i++) {
-		SpriteBatch::Draw(_wallTexture, _walls[i]->posRect, _walls[i]->sourceRect, Vector2::Zero, _wallScale, 0.0f, Color::White, SpriteEffect::NONE);
+	for (int i = 0; i < NUM_OF_WALLS; i++) {
+		SpriteBatch::Draw(
+			_wallTexture,
+			_walls[i]->self.position,
+			_walls[i]->self.sourceRect,
+			Vector2::Zero,
+			_wallScale,
+			0.0f, Color::White, SpriteEffect::NONE);
 	}
 
 	// Reset animation loop
@@ -346,19 +419,19 @@ void Pacman::Draw(int elapsedTime) {
 		_frameCount = 0;
 	}
 	
-	if (_paused) {
+	if (_pause->_menu) {
 		std::stringstream menuStream;
-		if (_mainMenu) {
+		if (_start->_menu) {
 			menuStream << "_.-| Press SPACE BAR to start |-._";
-			_menuStringPosition->X = _wWidth / 2.5f;
+			_start->_stringPosition->X = WWIDTH / 2.5f;
 		} else {
 			menuStream << "_.-| PAUSED! |-._";
-			_menuStringPosition->X = _wWidth / 2.3f;
+			_pause->_stringPosition->X = WWIDTH / 2.3f;
 		}
 
-		SpriteBatch::Draw(_menuBackGround, _menuRectangle, nullptr);
-		SpriteBatch::DrawRectangle(_menuTextRect, Color::Red);
-		SpriteBatch::DrawString(menuStream.str().c_str(), _menuStringPosition, Color::Green);
+		SpriteBatch::Draw(_pause->_backGround, _pause->_rect, nullptr);
+		SpriteBatch::DrawRectangle(_pause->_textRect, Color::Red);
+		SpriteBatch::DrawString(menuStream.str().c_str(), _pause->_stringPosition, Color::Green);
 	}
 	else {
 		_frameCount++;
@@ -374,9 +447,9 @@ void Pacman::Draw(int elapsedTime) {
 
 void Pacman::Input(int elapsedTime, Input::KeyboardState* state){
 	// Gets the current state of the keyboard
-	if (!_paused) {
+	if (!_pause->_menu) {
 		//Set pacman's LAST movement
-		_pacman->lastMove = _pacman->currentMove;
+		_pacman->lastMove = _pacman->currMove;
 
 		// Checks if W key is pressed
 		if (state->IsKeyDown(Input::Keys::W)) {
@@ -412,21 +485,21 @@ void Pacman::CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey, Inpu
 
 	// Checks is StartGame key is pressed (Start Screen)
 	if (state->IsKeyDown(startKey)) {
-		if (_mainMenu && _paused) {
-			_mainMenu = false;
-			_paused = false;
+		if (_start->_menu && _pause->_menu) {
+			_start->_menu = false;
+			_pause->_menu = false;
 		}
 	}
 
 	// Checks if Pause key is pressed (Pause Screen)
-	if (!_pKeyDown && state->IsKeyDown(pauseKey)) {
-		_paused = !_paused;
-		_pKeyDown = true;
+	if (!_pause->_keyDown && state->IsKeyDown(pauseKey)) {
+		_pause->_menu = !_pause->_menu;
+		_pause->_keyDown = true;
 	}
 
 	// 
 	if (state->IsKeyUp(pauseKey)) {
-		_pKeyDown = false;
+		_pause->_keyDown = false;
 	}
 }
 
@@ -439,12 +512,14 @@ void Pacman::CheckPacmanCollision() {
 		_pacman->sourceRect->Width,
 		_pacman->sourceRect->Height
 	);
-		
+
 	//check collision with munchies
+	int _munchieCounter = 0;
+
 	for (int i = 0; i < _munchieCounter; i++) {
 		if (!_munchies[i]->isEaten) {
 			//test munchie position
-			if (HasTargetHitObject(&tmpRect, _munchies[i]->posRect, _pacman->speed*2)) {
+			if (HasTargetHitObject(&tmpRect, _munchies[i]->self.position, _pacman->speed * 2)) {
 				//set flag
 				_munchies[i]->isEaten = true;
 
@@ -452,14 +527,11 @@ void Pacman::CheckPacmanCollision() {
 				_pacman->score += _munchies[i]->value;
 
 				//DEBUG
-				cout << "Eaten munchie at X:" << _munchies[i]->posRect->X <<
-					" Y:" << _munchies[i]->posRect->Y << endl;
+				cout << "Eaten munchie at X:" << _munchies[i]->self.position->X <<
+					" Y:" << _munchies[i]->self.position->Y << endl;
 			}
 		}
 	}
-
-	//check collision with walls
-	//HasHitWall();
 }
 
 bool Pacman::HasHitWall(Rect* target, bool isPlayer = true,
@@ -471,19 +543,19 @@ bool Pacman::HasHitWall(Rect* target, bool isPlayer = true,
 	Rect wall;
 	float slim = wallTolerance;	//reduction in wall boundary
 	
-	for (int i = 0; i < _wallCounter; i++) {
+	for (int i = 0; i < NUM_OF_WALLS; i++) {
 		if (isPlayer) {
 			passThroughable = _walls[i]->canPlayerPass;
 		} else {
 			passThroughable = _walls[i]->canGhostsPass;
 		}
 		if (!passThroughable) {
-			wall = *_walls[i]->posRect;
+			wall = *_walls[i]->self.position;
 			wall.Width -= slim;
 			wall.Height -= slim;
 			wall.X += slim / 2;
 			wall.Y += slim / 2;
-			if (HasTargetHitObject(target, &wall, targetTolerance)) {
+			if (HasTargetHitObject(target, &wall, targetTolerance, 'b')) {
 				return true;
 			}
 		}
@@ -515,7 +587,7 @@ std::string Pacman::GetMovementString(Movement movement) {
 	}
 }
 
-bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance) {
+bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode) {
 	float slim = tolerance;
 	float gitRadiusX = (git->Width - slim) / 2;
 	float gitRadiusY = (git->Height - slim) / 2;
@@ -531,31 +603,51 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance) {
 	objCenterX = obj->X + objRadiusX;
 	objCenterY = obj->Y + objRadiusY;
 
-	//test munchie position
-	if (abs(gitCenterX - objCenterX) < gitRadiusX + objRadiusX &&
-		abs(gitCenterY - objCenterY) < gitRadiusY + objRadiusY) {
-		return true;
-	}
-	else {
+	switch (mode) {
+	case 'b':
+	case 'B':
+		//test block position
+		if ((git->X > obj->X&& git->X < obj->X + obj->Width) ||
+			(git->X + git->Width > obj->X&& git->X + git->Width < obj->X + obj->Width) ||
+			(git->Y > obj->Y&& git->Y < obj->Y + obj->Height) ||
+			(git->Y + git->Height > obj->Y&& git->Y + git->Height < obj->Y + obj->Height)) {
+			return true;
+		} else {
+			return false;
+		}
+		break;
+	case 'c':
+	case 'C':
+		//test munchie position
+		if (abs(gitCenterX - objCenterX) < gitRadiusX + objRadiusX &&
+			abs(gitCenterY - objCenterY) < gitRadiusY + objRadiusY) {
+			return true;
+		}
+		else {
+			return false;
+		}
+		break;
+	default:
 		return false;
+		break;
 	}
 }
 
 void Pacman::CheckViewportCollision(){
 	/* wrap-around */
 	if (_pacman->position->Y < 0.0f) {
-		_pacman->position->Y = _wHeight - _pacman->sourceRect->Height;
+		_pacman->position->Y = WHEIGHT - _pacman->sourceRect->Height;
 	}
 
-	if (_pacman->position->Y > _wHeight - _pacman->sourceRect->Height) {
+	if (_pacman->position->Y > WHEIGHT - _pacman->sourceRect->Height) {
 		_pacman->position->Y = 1.0f;
 	}
 
 	if (_pacman->position->X < 1.0f) {
-		_pacman->position->X = _wWidth - _pacman->sourceRect->Width;
+		_pacman->position->X = WHEIGHT - _pacman->sourceRect->Width;
 	}
 
-	if (_pacman->position->X > _wWidth - _pacman->sourceRect->Width) {
+	if (_pacman->position->X > WHEIGHT - _pacman->sourceRect->Width) {
 		_pacman->position->X = 1.0f;
 	}
 }
@@ -576,18 +668,15 @@ void Pacman::UpdatePacman(int elapsedTime){
 	tmpPos.X = (int)round(_pacman->position->X);
 	tmpPos.Y = (int)round(_pacman->position->Y);
 
-	if (tmpPos.X % TILE_SIZE == 0) {
-		_pacman->position->X = tmpPos.X;
-	}
-	if (tmpPos.Y % TILE_SIZE == 0) {
-		_pacman->position->Y = tmpPos.Y;
-	}
+	//Get next direction vector
+	nextDir = WillHitWall(&tmpRect, _pacman->nextMove, _pacman->speed);
 
-	if (tmpPos.X % TILE_SIZE == 0 &&
-		tmpPos.Y % TILE_SIZE == 0) {
+	//Get current direction vector
+	currDir = WillHitWall(&tmpRect, _pacman->currMove, _pacman->speed);
+
+	if (tmpPos.X % TILE_SIZE == 0 && tmpPos.Y % TILE_SIZE == 0) {
 		canTurn = true;
-	}
-	else {
+	} else {
 		canTurn = false;
 	}
 
@@ -604,7 +693,6 @@ void Pacman::UpdatePacman(int elapsedTime){
 	}
 
 	_pacman->sourceRect->X = _pacman->sourceRect->Width * _pacman->frame;
-	//_pacman->sourceRect->X = (_pacman->sourceRect->Width * _pacman->frame)+5;
 
 	//Get player position and size
 	tmpRect = Rect(
@@ -614,131 +702,64 @@ void Pacman::UpdatePacman(int elapsedTime){
 		_pacman->sourceRect->Height
 	);
 
-	//Get direction vector
-	nextDir = WillHitWall(&tmpRect, _pacman->nextMove, tmpSpeed);
-
-	//Is NextMove valid ? or does NextMove hit a wall ?
-	if (nextDir.X < 0.0f || nextDir.X > 0.0f ||
-		nextDir.Y < 0.0f || nextDir.Y > 0.0f) {
-		if (canTurn) {
-			tmpDir = nextDir;
-			_pacman->currentMove = _pacman->nextMove;
-		}
-	} else {
-		//DEBUG
-		std::cout << "Next Move Hits a wall." << endl;
-		//wait until able to apply NextMove
-	}
-
-	if (_pacman->currentMove == Movement::mSTOP) {
-		//overwrite current move with next move
-		currDir = nextDir;
-		_pacman->currentMove = _pacman->nextMove;
-	} else {
+	if (_pacman->currMove != _pacman->nextMove ||
+		_pacman->currMove == Movement::mSTOP) {
+		//Is NextMove valid ? or does NextMove hit a wall ?
 		if (nextDir.X < 0.0f || nextDir.X > 0.0f ||
 			nextDir.Y < 0.0f || nextDir.Y > 0.0f) {
-			currDir = nextDir;
-			_pacman->currentMove = _pacman->nextMove;
+			if (canTurn) {
+				tmpDir = nextDir;
+				_pacman->currMove = _pacman->nextMove;
+			}
 		} else {
-			//Is CurrentMove valid? or does CurrentMove hit a wall?
-			currDir = WillHitWall(&tmpRect, _pacman->currentMove, tmpSpeed);
 
+			//Is CurrentMove valid? or does CurrentMove hit a wall?
 			if (currDir.X < 0.0f || currDir.X > 0.0f ||
 				currDir.Y < 0.0f || currDir.Y > 0.0f) {
 				tmpDir = currDir;
-			}
-			else {
+			} else {
 				//DEBUG
 				std::cout << "Curr Move Hits a wall." << endl;
 
 				//reset player to tilemap
-				if (!canTurn) {
-					tmpPos.X = (int)round(_pacman->position->X / TILE_SIZE);
-					tmpPos.Y = (int)round(_pacman->position->Y / TILE_SIZE);
+				tmpPos.X = (int)round(_pacman->position->X / TILE_SIZE);
+				tmpPos.Y = (int)round(_pacman->position->Y / TILE_SIZE);
 
-					_pacman->position->X = tmpPos.X * TILE_SIZE;
-					_pacman->position->Y = tmpPos.Y * TILE_SIZE;
-				}
-				else {
-					if (nextDir.X < 0.0f || nextDir.X > 0.0f ||
-						nextDir.Y < 0.0f || nextDir.Y > 0.0f) {
-						currDir = nextDir;
-						_pacman->currentMove = _pacman->nextMove;
-					}
-				}
+				_pacman->position->X = tmpPos.X * TILE_SIZE;
+				_pacman->position->Y = tmpPos.Y * TILE_SIZE;
+				_pacman->currMove = Movement::mSTOP;
 			}
 		}
-	}
+	} else if(_pacman->currMove == _pacman->nextMove){
+		//Get current direction vector
+		currDir = WillHitWall(&tmpRect, _pacman->currMove, tmpSpeed);
 
-	if (_pacman->lastMove != Movement::mSTOP &&
-		_pacman->currentMove != Movement::mSTOP) {
-		//Is LastMove valid? or does LastMove hit a wall?
-		lastDir = WillHitWall(&tmpRect, _pacman->lastMove, tmpSpeed);
-
-		if (lastDir.X < 0.0f || lastDir.X > 0.0f ||
-			lastDir.Y < 0.0f || lastDir.Y > 0.0f) {
-			currDir = lastDir;
-			_pacman->currentMove = _pacman->lastMove;
+		//Is CurrentMove valid? or does CurrentMove hit a wall?
+		if (currDir.X < 0.0f || currDir.X > 0.0f ||
+			currDir.Y < 0.0f || currDir.Y > 0.0f) {
+			tmpDir = currDir;
 		} else {
 			//DEBUG
-			std::cout << "Last Move Hits a wall." << endl;
-			_pacman->currentMove = Movement::mSTOP;
+			std::cout << "Curr Move Hits a wall." << endl;
+
+			//reset player to tilemap
+			tmpPos.X = (int)round(_pacman->position->X / TILE_SIZE);
+			tmpPos.Y = (int)round(_pacman->position->Y / TILE_SIZE);
+
+			_pacman->position->X = tmpPos.X * TILE_SIZE;
+			_pacman->position->Y = tmpPos.Y * TILE_SIZE;
+			_pacman->currMove = Movement::mSTOP;
 		}
 	}
-	
-	tmpDir = currDir;
 
-	////Is NextMove valid? or does NextMove hit a wall?
-	//if (nextDir.X < 0.0f || nextDir.X > 0.0f ||
-	//	nextDir.Y < 0.0f || nextDir.Y > 0.0f) {
-	//	_pacman->currentMove = _pacman->nextMove;
-	//	tmpDir = nextDir;
-	//} else {
-	//	if (_pacman->nextMove != Movement::mSTOP) {
-	//		//DEBUG
-	//		cout << "Next Move Hits a WALL!!" << endl;
-
-	//		//Is CurrentMove valid? or does CurrentMove hit a wall?
-	//		currDir = WillHitWall(&tmpRect, _pacman->currentMove, tmpSpeed);
-	//		if (currDir.X < 0.0f || currDir.X > 0.0f ||
-	//			currDir.Y < 0.0f || currDir.Y > 0.0f) {
-	//			tmpDir = currDir;
-	//		}
-	//		else {
-	//			//DEBUG
-	//			cout << "Curr Move Hits a wall!" << endl;
-
-	//			if (_pacman->lastMove != Movement::mSTOP) {
-	//				//Is LastMove valid? or does lastMove hit a wall?
-	//				lastDir = WillHitWall(&tmpRect, _pacman->lastMove, tmpSpeed);
-	//				if (lastDir.X < 0.0f || currDir.X > 0.0f ||
-	//					lastDir.Y < 0.0f || lastDir.Y > 0.0f) {
-	//					currDir = lastDir;
-	//				}
-	//				else {
-	//					//DEBUG
-	//					cout << "Last Move Hits a wall!" << endl;
-	//					_pacman->currentMove = Movement::mSTOP;
-	//				}
-
-	//			}
-	//			else {
-	//				//_pacman->currentMove = Movement::mSTOP;
-	//			}
-	//			tmpDir = currDir;
-	//		}
-	//	}
-	//}
-
-	
 	// apply tested direction to pacman's direction
 	_pacman->direction->X = tmpDir.X;
 	_pacman->direction->Y = tmpDir.Y;
 
 	// apply facing direction to sprite
-	if (_pacman->facing != IsFacing(_pacman->currentMove) &&
-		IsFacing(_pacman->currentMove) != dNULL) {
-		_pacman->facing = IsFacing(_pacman->currentMove);
+	if (_pacman->facing != IsFacing(_pacman->currMove) &&
+		IsFacing(_pacman->currMove) != dNULL) {
+		_pacman->facing = IsFacing(_pacman->currMove);
 	}
 	//_pacman->sourceRect->Y = (_pacman->sourceRect->Height * _pacman->facing)+3;
 	_pacman->sourceRect->Y = _pacman->sourceRect->Height * _pacman->facing;
@@ -748,7 +769,7 @@ void Pacman::UpdatePacman(int elapsedTime){
 	_pacman->position->X += _pacman->direction->X;
 		
 	// store last movement
-	_pacman->lastMove = _pacman->currentMove;
+	_pacman->lastMove = _pacman->currMove;
 }
 
 Direction Pacman::IsFacing(Movement movement) {
@@ -844,14 +865,14 @@ Vector2 Pacman::WillHitWall(Rect* target, Movement targetMove, float targetSpd) 
 
 void Pacman::UpdateMunchie(int elapsedTime){
 	// Draw Munchies (big and small)
-	for (int i = 0; i < _munchieCounter; i++) {
+	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
 		// Animate munchie
 		if (_frameCount < 30) {
 			// Select Red Munchie
-			_munchies[i]->sourceRect->X = _munchies[i]->posRect->Width;
+			_munchies[i]->self.position->X = _munchies[i]->self.position->Width;
 		} else {
 			// Select Blue Munchie
-			_munchies[i]->sourceRect->X = 0.0f;
+			_munchies[i]->self.position->X = 0.0f;
 		}
 	}
 }
