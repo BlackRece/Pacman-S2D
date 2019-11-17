@@ -22,8 +22,8 @@
 using namespace S2D;
 
 struct Vector2i {
-	int X;
-	int Y;
+	int X = 0;
+	int Y = 0;
 };
 
 enum Movement {
@@ -169,20 +169,17 @@ private:
 
 	int score = 0;
 
-	void Input(int elapsedTime, Input::KeyboardState* state);
 
-	void CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey, Input::Keys startKey);
+	Vector2 ApplyMovement(Movement direction, float velocity);
 
 	void CheckPacmanCollision();
 
-
-
-	void CheckViewportCollision();
+	void CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey, Input::Keys startKey);
 
 	void CheckStart(Input::KeyboardState* state, Input::Keys startKey);
 
-	bool collisionCheck(int x1, int y1, int width1, int height1, int x2, int y2, int width2, int height2);
-	
+	void CheckViewportCollision();
+
 	void DeleteEntity(Entity* obj);
 
 	void DeleteMenu(Menu* obj);
@@ -201,15 +198,19 @@ private:
 
 	bool HasTargetHitObject(Rect* git, Rect* obj, float tolerance = 0, char mode = 'c');
 
-	void UpdatePacman(int elapsedTime);
+	void Input(int elapsedTime, Input::KeyboardState* state);
 
 	Direction IsFacing(Movement movement);
 
-	Vector2 WillHitWall(Rect* target, Movement targetMove, float targetSpd);
+	bool IsSpaceTile(Vector2i origin, Movement moveTo);
+
+	void UpdateCherry(int elapsedTime);
 
 	void UpdateMunchie(int elapsedTime);
 
-	void UpdateCherry(int elapsedTime);
+	void UpdatePacman(int elapsedTime);
+
+	bool WillHitWall(Rect* target, Movement targetMove, float targetSpd);
 
 
 
