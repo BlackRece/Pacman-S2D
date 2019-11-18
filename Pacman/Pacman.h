@@ -26,7 +26,7 @@ struct Vector2i {
 	int Y = 0;
 };
 
-enum Movement {
+enum  Movement {
 	mLEFT = 0,
 	mRIGHT,
 	mUP,
@@ -34,7 +34,7 @@ enum Movement {
 	mSTOP
 };
 
-enum Direction {
+enum class Direction {
 	dRIGHT = 0,
 	dDOWN,
 	dLEFT,
@@ -90,7 +90,7 @@ struct Munchie {
 	Entity self;
 
 	float offset;
-	bool scale;
+	float scale;
 	bool isPowerPellet;
 
 	bool isEaten;

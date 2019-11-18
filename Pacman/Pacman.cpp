@@ -276,8 +276,6 @@ void Pacman::DefineMap() {
 			case '+':
 			case '.':
 				//all munchies
-				_munchies[_munchieCounter] = new Munchie();
-				_munchies[_munchieCounter]->self = Entity();
 				_munchies[_munchieCounter]->self.sourceRect = new Rect(0.0f, 0.0f, 11, 11);
 				_munchies[_munchieCounter]->self.position = new Rect(
 					(col)*TILE_SIZE,
@@ -405,6 +403,12 @@ void Pacman::Draw(int elapsedTime) {
 				Vector2::Zero,
 				_munchies[i]->scale,
 				0.0f, Color::White, SpriteEffect::NONE);
+
+			//DEBUG
+			/*if (_munchies[i]->isPowerPellet) {
+				cout << "PowerPellet [" << _munchies[i]->self.position->X << "][" <<
+					_munchies[i]->self.position->Y << "] found!" << endl;
+			}*/
 		}
 	}
 
@@ -481,7 +485,7 @@ void Pacman::Input(int elapsedTime, Input::KeyboardState* state){
 		}
 
 		//DEBUG
-		cout << "next move is > " << _pacman->nextMove;
+		cout << "next move is > " << _pacman->nextMove << endl;
 	}
 }
 
@@ -524,7 +528,7 @@ void Pacman::CheckPacmanCollision() {
 	//check collision with munchies
 	int _munchieCounter = 0;
 
-	for (int i = 0; i < _munchieCounter; i++) {
+	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
 		if (!_munchies[i]->isEaten) {
 			//test munchie position
 			if (HasTargetHitObject(&tmpRect, _munchies[i]->self.position, 0)) {
@@ -622,7 +626,7 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode
 	float objCenterX = obj->X + objRadiusX;
 	float objCenterY = obj->Y + objRadiusY;
 
-	float dist = (
+	float dist = sqrt(
 		abs(gitCenterX - objCenterX) + 
 		abs(gitCenterY - objCenterY)
 	);
@@ -663,12 +667,16 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode
 			*/
 		//if ((btm1 >= top2) && (top1 <= btm2) && (left1 <= right2) && (right1 >= left2))
 		if (git->Y + git->Height >= obj->Y) {
+			//bot1 > top2
 			return false;
 		} else if (git->Y <= obj->Y + obj->Height) {
+			//top1 < bot2
 			return false;
-		} else if (git->X <= obj->X + obj->Width) {
+		} else if (git->X >= obj->X + obj->Width) {
+			//left1 > right2
 			return false;
-		} else if (git->X + git->Width + obj->X) {
+		} else if (git->X + git->Width <= obj->X) {
+			//right1 < left2
 			return false;
 		} else {
 		//at this point, there must have been a collision
@@ -730,11 +738,11 @@ void Pacman::CheckViewportCollision(){
 		_pacman->position->Y = 1.0f;
 	}
 
-	if (_pacman->position->X < 1.0f) {
-		_pacman->position->X = WHEIGHT - _pacman->sourceRect->Width;
+	if (_pacman->position->X < 0.0f) {
+		_pacman->position->X = WWIDTH- _pacman->sourceRect->Width;
 	}
 
-	if (_pacman->position->X > WHEIGHT - _pacman->sourceRect->Width) {
+	if (_pacman->position->X > WWIDTH - _pacman->sourceRect->Width) {
 		_pacman->position->X = 1.0f;
 	}
 }
@@ -781,88 +789,32 @@ void Pacman::UpdatePacman(int elapsedTime){
 		_pacman->sourceRect->Height
 	);
 
-	tmpTile.X = ceil(_pacman->position->X) / TILE_SIZE;
-	tmpTile.Y = ceil(_pacman->position->Y) / TILE_SIZE;
+	tmpTile.X = ceil(_pacman->position->X);//% TILE_SIZE;
+	tmpTile.Y = ceil(_pacman->position->Y);// / TILE_SIZE;
 		
-	bool isWalkable = IsSpaceTile(tmpTile, _pacman->nextMove);
+	// lock pacman's movement to tile grid
+	// by only allowing direction changes when in line with tiles
+	if ((tmpTile.X % TILE_SIZE < tmpSpeed) &&
+		(tmpTile.Y % TILE_SIZE < tmpSpeed)) {
+		// test next direction?
+		if (//(_pacman->nextMove != Movement::mSTOP) &&
+			(IsSpaceTile(tmpTile, _pacman->nextMove))) {
 
-	//test pacman's next move
-	if (isWalkable &&
-		_pacman->nextMove != Movement::mSTOP) {
-		//DEBUG
-		cout << "nextMove is valid" << endl;
-
-		nextMoveValid = true;
-
-		if (canTurn) {
-			//DEBUG
-			cout << "setting next move as current move" << endl;
-
+			// set new direction
 			_pacman->currMove = _pacman->nextMove;
+		} else {
 		}
-	} else {
-		//DEBUG
-		cout << "nextMove is NOT valid" << endl;
-
-		nextMoveValid = false;
 	}
 
-	/*
-	if (_pacman->nextMove != Movement::mSTOP //&& _pacman->nextMove != _pacman->currMove
-		) {
-		if (!WillHitWall(&tmpRect, _pacman->nextMove, tmpSpeed)) {
-			//DEBUG
-			cout << "nextMove is valid" << endl;
+	if ((_pacman->currMove != Movement::mSTOP) &&
+		(!IsSpaceTile(tmpTile, _pacman->currMove))) {
+		// halt
+		_pacman->currMove = Movement::mSTOP;
 
-			nextMoveValid = true;
-
-			if (canTurn) {
-				//DEBUG
-				cout << "setting next move as current move" << endl;
-
-				_pacman->currMove = _pacman->nextMove;
-			}
-
-		} else {
-			//DEBUG
-			cout << "nextMove is NOT valid" << endl;
-
-			nextMoveValid = false;
-		}
-	}
-	*/
-	
-	//test pacman's current move
-	if (_pacman->currMove != Movement::mSTOP) {
-		if (!WillHitWall(&tmpRect, _pacman->currMove, tmpSpeed)) {
-			//DEBUG
-			cout << "curr move is valid" << endl;
-
-			currMoveValid = true;
-
-		} else {
-			//DEBUG
-			cout << "curr move is NOT valid" << endl;
-
-			currMoveValid = false;
-
-			_pacman->currMove = Movement::mSTOP;
-
-			//center pacman to current tile
-			_pacman->position->X = tmpTile.X * TILE_SIZE;
-			_pacman->position->Y = tmpTile.Y * TILE_SIZE;
-		}
-	} else {
-		//DEBUG
-		cout << "curr move is STOP" << endl;
-
-
-		if (nextMoveValid && canTurn) {
-			//DEBUG
-			cout << "doing next move" << endl;
-
-			_pacman->currMove = _pacman->nextMove;
-		}
+		// re-align to tile grid
+		_pacman->position->X = ceil(tmpTile.X / TILE_SIZE) * TILE_SIZE;
+		_pacman->position->Y = ceil(tmpTile.Y / TILE_SIZE) * TILE_SIZE;
+		
 	}
 
 	// apply tested direction to pacman's direction
@@ -873,11 +825,11 @@ void Pacman::UpdatePacman(int elapsedTime){
 
 	// apply facing direction to sprite
 	if (_pacman->facing != IsFacing(_pacman->currMove) &&
-		IsFacing(_pacman->currMove) != dNULL) {
+		IsFacing(_pacman->currMove) != Direction::dNULL) {
 		_pacman->facing = IsFacing(_pacman->currMove);
 	}
 	//_pacman->sourceRect->Y = (_pacman->sourceRect->Height * _pacman->facing)+3;
-	_pacman->sourceRect->Y = _pacman->sourceRect->Height * _pacman->facing;
+	_pacman->sourceRect->Y = _pacman->sourceRect->Height * (int)_pacman->facing;
 
 	// apply direction to position
 	_pacman->position->Y += _pacman->direction->Y;
@@ -902,7 +854,7 @@ Direction Pacman::IsFacing(Movement movement) {
 		return Direction::dUP;
 		break;
 	default:
-		return dNULL;
+		return Direction::dNULL;
 		//return Direction::dRIGHT;
 		break;
 	}
@@ -911,43 +863,43 @@ Direction Pacman::IsFacing(Movement movement) {
 bool Pacman::IsSpaceTile(Vector2i origin, Movement moveTo) {
 	Vector2i tmpTile = Vector2i();
 	
-	if (origin.X > MAP_COLS || origin.Y > MAP_ROWS) {
+	tmpTile.X = origin.X / TILE_SIZE;
+	tmpTile.Y = origin.Y / TILE_SIZE;
+	
+	if (tmpTile.X > MAP_COLS || tmpTile.Y > MAP_ROWS) {
 		return true;
 	} else {
-		tmpTile.X += origin.X;
-		tmpTile.Y += origin.Y;
 
 		switch (moveTo){
-		case mLEFT:
+		case Movement::mLEFT:
 			tmpTile.X--;
 			break;
-		case mRIGHT:
+		case Movement::mRIGHT:
 			tmpTile.X++;
 			break;
-		case mUP:
+		case Movement::mUP:
 			tmpTile.Y--;
 			break;
-		case mDOWN:
+		case Movement::mDOWN:
 			tmpTile.Y++;
 			break;
-		case mSTOP:
+		case Movement::mSTOP:
 		default:
 			return false;
 			break;
 		}
 
-		if (map[tmpTile.X][tmpTile.Y] == '#') {
+		//TODO: check types of tiles that pacman can move on/through
+		if (map[tmpTile.Y][tmpTile.X] == '#') {
 			//DEBUG
-			cout << "Tile at[" << tmpTile.X << "][" << tmpTile.Y << "] is a wall!" << endl;
-			return true;
+			cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is a wall!" << endl;
+			return false;
 		} else {
 			//DEBUG
-			cout << "Tile at[" << tmpTile.X << "][" << tmpTile.Y << "] is empty!" << endl;
-			return false;
+			cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is empty!" << endl;
+			return true;
 		}
 	}
-
-
 }
 
 bool Pacman::WillHitWall(Rect* target, Movement targetMove, float targetSpd) {
