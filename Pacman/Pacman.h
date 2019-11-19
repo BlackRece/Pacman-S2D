@@ -145,8 +145,10 @@ private:
 	const float _cPacmanSpeed;
 	const int _cPacmanFrameTime;
 	
+	Player* _pacman;
 	int _pacmanFrame;
 	int _pacmanCurrentFrameTime;
+
 	int _frameCount;
 	int _time = 0;
 
@@ -155,8 +157,9 @@ private:
 	Menu* _pause;
 	Menu* _start;
 	bool _mainMenu;
+
+	SoundEffect* _pop;
 	
-	Player* _pacman;
 
 	//data to represent munchies
 	Munchie* _munchies[NUM_OF_MUNCHIES] = { nullptr };

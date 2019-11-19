@@ -72,9 +72,12 @@ Pacman::Pacman(int argc, char* argv[]) :
 	_start->_stringPosition = new Vector2(WWIDTH/ 2.3f,
 		(WHEIGHT/ 2.0f) + 100.0f);
 	_start->text = "_. - | Press SPACE BAR to start | -._";
-	//_mainMenu = true;
+	
+	// music & soundeffects
+	_pop = new SoundEffect();
 
 	//Initialise important Game aspects
+	Audio::Initialise();
 	Graphics::Initialise(argc, argv, this, WWIDTH, WHEIGHT, false, 25, 25, "Pacman", 60);
 	Input::Initialise();
 
@@ -115,6 +118,8 @@ Pacman::~Pacman()
 
 	DeleteMenu(_start);
 	delete _start;
+
+	delete _pop;
 }
 
 void Pacman::DeleteEntity(Entity* obj)
@@ -217,6 +222,9 @@ void Pacman::LoadContent()
 	 * - Load Ghosts/Enemies
 	 * - Load Pills/Pickups/Fruit/Power-Ups
 	 */
+
+	// Load Music & Sounds
+	_pop->Load("Sounds/pop.wav");
 
 	// Set string position
 	_stringPosition = new Vector2(10.0f, 25.0f);
@@ -667,6 +675,9 @@ void Pacman::CheckPacmanCollision() {
 
 				//update score
 				_pacman->score += _munchies[i]->value;
+
+				//play soundfx
+				Audio::Play(_pop);
 
 				//scare ghosts!
 				if (_munchies[i]->isPowerPellet) {
