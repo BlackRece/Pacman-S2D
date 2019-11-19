@@ -6,6 +6,7 @@
 #define NUM_OF_MUNCHIES 210
 #define MAP_ROWS 23
 #define MAP_COLS 27
+#define NUM_OF_GHOSTS 4
 
 // If Windows and not in Debug, this will run without a console window
 // You can use this to output information when debugging using cout or cerr
@@ -26,7 +27,7 @@ struct Vector2i {
 	int Y = 0;
 };
 
-enum  Movement {
+enum class Movement : unsigned int {
 	mLEFT = 0,
 	mRIGHT,
 	mUP,
@@ -34,7 +35,7 @@ enum  Movement {
 	mSTOP
 };
 
-enum class Direction {
+enum class Direction : unsigned int {
 	dRIGHT = 0,
 	dDOWN,
 	dLEFT,
@@ -56,6 +57,10 @@ struct Player {
 	Movement currMove;
 	Movement lastMove;
 	float speed;
+	bool isBoosting;
+	int boostDuration;
+	int boostDurationMax;
+	float boostMultiply;
 
 	int score;
 };
@@ -110,8 +115,15 @@ struct Bonus {
 struct Enemy {
 	Entity self;
 
+	int currFrame;
+	int maxFrame;
 	bool isChasing;
 	bool isAlive;
+	bool isSafe;
+
+	Direction facing;
+	Movement motion;
+	float speed;
 };
 
 struct Menu {
@@ -147,20 +159,23 @@ private:
 	Player* _pacman;
 
 	//data to represent munchies
-	Munchie* _munchies[NUM_OF_MUNCHIES];
+	Munchie* _munchies[NUM_OF_MUNCHIES] = { nullptr };
 	Texture2D* _munchieTexture;
-	//int _munchieCounter;
 
 	Bonus* _cherry;
 	Bonus* _powerUp;
 
 	//data to represent border
 	const static int NUM_OF_WALLS = MAX_ELEMENTS - NUM_OF_MUNCHIES;
-	Obstacle* _walls[NUM_OF_WALLS];
+	Obstacle* _walls[NUM_OF_WALLS] = { nullptr };
 	Texture2D* _wallTexture;
-	//int _wallCounter;
 	int _wallScale;
 
+	//data to represent ghosts
+	Enemy* _ghosts[NUM_OF_GHOSTS];
+	Texture2D* _ghostTexture;
+	int _ghostFearTimer;
+	int _ghostFearTimerMax;
 
 	// Position for Strings
 	Vector2* _stringPosition;
@@ -169,8 +184,8 @@ private:
 
 	int score = 0;
 
-
 	Vector2 ApplyMovement(Movement direction, float velocity);
+
 
 	void CheckPacmanCollision();
 
@@ -192,6 +207,8 @@ private:
 
 	void DeleteMunchie(Munchie* obj);
 	
+	Movement GetMapMovement(Vector2i tile);
+	
 	std::string GetMovementString(Movement movement);
 
 	bool HasHitWall(Rect* target, bool isPlayer, float targetTolerance = 0, float wallTolerance = 0);
@@ -204,14 +221,19 @@ private:
 
 	bool IsSpaceTile(Vector2i origin, Movement moveTo);
 
+	Movement RandomMotion();
+
+	void ScareGhosts();
+
 	void UpdateCherry(int elapsedTime);
+
+	void UpdateGhost(int elapsedTime);
 
 	void UpdateMunchie(int elapsedTime);
 
 	void UpdatePacman(int elapsedTime);
 
 	bool WillHitWall(Rect* target, Movement targetMove, float targetSpd);
-
 
 
 public:
@@ -229,6 +251,8 @@ public:
 	void LoadMap();
 	
 	/// <summary> Called once to initialise map elements from loaded map array. </summary>
+	void InitialiseGhosts();
+
 	void InitialiseMunchies();
 
 	void InitialiseWalls();
