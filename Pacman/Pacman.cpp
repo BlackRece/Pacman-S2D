@@ -17,7 +17,7 @@ Pacman::Pacman(int argc, char* argv[]) :
 	_pacman->frame = 0;
 	_pacman->texture = new Texture2D();
 	_pacman->position = new Vector2(350.0f, 350.0f);
-	//_pacman->sourceRect = new Rect(3.0f, 3.0f, 27, 27);
+	_pacman->lives = 3;
 	_pacman->sourceRect = new Rect(0.0f, 0.0f, 32, 32);
 	_pacman->direction = new Vector2(0.0f, 0.0f);
 	_pacman->currMove = Movement::mSTOP;
@@ -178,8 +178,6 @@ void Pacman::LoadContent()
 	}
 
 	// Load Ghosts
-	//DEBUG
-	_ghostTexture->Load("Textures/Ghosts_Red.png", true);
 	int ghostID = 0;
 	for (int i = 0; i < NUM_OF_GHOSTS; i++) {
 		switch (ghostID) {
@@ -198,7 +196,7 @@ void Pacman::LoadContent()
 			ghostID = 0;
 			break;
 		}
-		//_ghosts[i]->self.texture = _ghostTexture;
+		
 		if (ghostID < 3) {
 			ghostID++;
 		} else {
@@ -213,12 +211,6 @@ void Pacman::LoadContent()
 	/* TODO
 	 * ====
 	 * 
-	 * - Construct Level:
-	 * load level_0.txt
-	 * store level data in 2d array
-	 * loop through each line
-	 * place graphic depending on char in line
-	 *
 	 * - Load Ghosts/Enemies
 	 * - Load Pills/Pickups/Fruit/Power-Ups
 	 */
@@ -240,9 +232,6 @@ void Pacman::LoadMap() {
 	string rawRow = "";
 	int rowCount = 0;
 
-	//DEBUG
-	string tmpArray[MAP_ROWS];
-
 	if (mapFile.is_open()) {
 		while (getline(mapFile, rawRow, '\n')) {
 
@@ -251,9 +240,6 @@ void Pacman::LoadMap() {
 				mapFile.close();
 				exit(-1);
 			}
-
-			//DEBUG
-			tmpArray[rowCount] = rawRow;
 
 			for (int i = 0; i < MAP_COLS; i++) {
 				
@@ -349,11 +335,11 @@ void Pacman::DefineMap() {
 			case '+':
 			case '.':
 				//all munchies
-				_munchies[_munchieCounter]->self.sourceRect = new Rect(0.0f, 0.0f, 11, 11);
+				_munchies[_munchieCounter]->self.sourceRect = new Rect(0.0f, 0.0f, MUNCHIE_SIZE, MUNCHIE_SIZE);
 				_munchies[_munchieCounter]->self.position = new Rect(
 					(col)*TILE_SIZE,
 					(row)*TILE_SIZE,
-					12, 12
+					MUNCHIE_SIZE, MUNCHIE_SIZE
 				);
 
 				_munchies[_munchieCounter]->isEaten = false;
@@ -439,10 +425,11 @@ void Pacman::Update(int elapsedTime) {
 	/* PACMAN UPDATE */
 	//cout << "elapsedTime : " << elapsedTime << "ms" << std::endl;
 	Input::KeyboardState* keyboardState = Input::Keyboard::GetState();
+	Input::MouseState* mouseState = Input::Mouse::GetState();
 	CheckPaused(keyboardState, Input::Keys::P, Input::Keys::SPACE);
 
 	if (!_pause->_menu || !_start->_menu) {
-		Input(elapsedTime, keyboardState);
+		Input(elapsedTime, keyboardState, mouseState);
 		UpdatePacman(elapsedTime);
 		UpdateMunchie(elapsedTime);
 		UpdateGhost(elapsedTime);
@@ -464,11 +451,11 @@ void Pacman::Draw(int elapsedTime) {
 	// Allows us to easily create a string
 	std::stringstream stream, streamDirection, streamScore;
 	stream << "Pacman X: " << _pacman->position->X << " Y: " << _pacman->position->Y;
-	//streamDirection << "Direction X: " << _pacman->direction->X << " Y: " << _pacman->direction->Y;
-	/*streamDirection << "LastMovement: " << GetMovementString(_pacman->lastMove) <<
-		"CurrentMovement: " << GetMovementString(_pacman->currMove) <<
-		" NextMovement: " << GetMovementString(_pacman->nextMove);*/
-	streamDirection << "Boost: " << _pacman->boostDuration << " Fear Timer: " << _ghostFearTimer;
+	streamDirection << "Direction X: " << _pacman->direction->X << " Y: " << _pacman->direction->Y//;
+	//streamDirection << "LastMovement: " << GetMovementString(_pacman->lastMove) <<
+		<< "CurrentMovement: " << GetMovementString(_pacman->currMove) <<
+		" NextMovement: " << GetMovementString(_pacman->nextMove);
+	//streamDirection << "Boost: " << _pacman->boostDuration << " Fear Timer: " << _ghostFearTimer;
 	streamScore << "Score : " << _pacman->score;
 
 	SpriteBatch::BeginDraw(); // Starts Drawing
@@ -581,32 +568,38 @@ void Pacman::Draw(int elapsedTime) {
 	SpriteBatch::EndDraw(); // Ends Drawing
 }
 
-void Pacman::Input(int elapsedTime, Input::KeyboardState* state){
+void Pacman::Input(int elapsedTime, 
+	Input::KeyboardState* state,
+	Input::MouseState* mouseState){
 	// Gets the current state of the keyboard
 	if (!_pause->_menu) {
 		//Set pacman's LAST movement
 		_pacman->lastMove = _pacman->currMove;
 
 		// Checks if W key is pressed
-		if (state->IsKeyDown(Input::Keys::W)) {
+		if (state->IsKeyDown(Input::Keys::W) ||
+			state->IsKeyDown(Input::Keys::UP)) {
 			//Set pacman's NEXT movement
 			_pacman->nextMove = Movement::mUP;
 		}
 
 		// Checks if S key is pressed
-		else if (state->IsKeyDown(Input::Keys::S)) {
+		else if (state->IsKeyDown(Input::Keys::S) ||
+			state->IsKeyDown(Input::Keys::DOWN)) {
 			//Set pacman's NEXT movement
 			_pacman->nextMove = Movement::mDOWN;
 		}
 
 		// Checks if A key is pressed
-		else if (state->IsKeyDown(Input::Keys::A)) {
+		else if (state->IsKeyDown(Input::Keys::A) ||
+			state->IsKeyDown(Input::Keys::LEFT)) {
 			//Set pacman's NEXT movement
 			_pacman->nextMove = Movement::mLEFT;
 		}
 
 		// Checks if D key is pressed
-		else if (state->IsKeyDown(Input::Keys::D)) {
+		else if (state->IsKeyDown(Input::Keys::D) ||
+			state->IsKeyDown(Input::Keys::RIGHT)) {
 			//Set pacman's NEXT movement
 			_pacman->nextMove = Movement::mRIGHT;
 		}
@@ -622,8 +615,19 @@ void Pacman::Input(int elapsedTime, Input::KeyboardState* state){
 				}
 			}
 		}
-		//DEBUG
-		cout << "next move is > " << static_cast<int>(_pacman->nextMove) << endl;
+		
+		// Gets the current state of the mouse
+		if (mouseState->LeftButton == Input::ButtonState::PRESSED) {
+			//DEBUG
+			//cout << "next move is > " << static_cast<int>(_pacman->nextMove) << endl;
+			Vector2i mTile;
+			mTile.X = floor(mouseState->X / TILE_SIZE);
+			mTile.Y = floor(mouseState->Y / TILE_SIZE);
+			cout << "Mouse LeftClick at: X-" << mouseState->X << ", Y-" << mouseState->Y <<
+				"\n(maptile @ map[" << mTile.Y << "][" << mTile.X << "] = " << 
+				map[mTile.Y][mTile.X] << ")";
+
+		}
 	}
 }
 
@@ -736,6 +740,57 @@ bool Pacman::HasHitWall(Rect* target, bool isPlayer = true,
 	return false;
 }
 
+bool Pacman::HasHitWall(Vector2i origin, Movement moveTo) {
+	Vector2i tmpTile = Vector2i();
+
+	tmpTile.X = floor(origin.X) / TILE_SIZE;
+	tmpTile.Y = floor(origin.Y) / TILE_SIZE;
+
+	//if (tmpTile.X > MAP_COLS || tmpTile.Y > MAP_ROWS) {
+	//	return true;
+	//} else {
+
+	switch (moveTo) {
+	case Movement::mLEFT:
+		tmpTile.X--;
+		break;
+	case Movement::mRIGHT:
+		tmpTile.X++;
+		break;
+	case Movement::mUP:
+		tmpTile.Y--;
+		break;
+	case Movement::mDOWN:
+		tmpTile.Y++;
+		break;
+	case Movement::mSTOP:
+	default:
+		return true;
+		break;
+	}
+
+	//TODO: check types of tiles that pacman can move on/through
+	switch (map[tmpTile.Y][tmpTile.X]) {
+	case '#':
+		//DEBUG
+		cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is a wall!" << endl;
+		return false;
+		break;
+	case '<':
+	case '>':
+		return true;
+		break;
+	case ' ':
+	default:
+		//DEBUG
+		cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is empty!" << endl;
+		return true;
+		break;
+	}
+}
+
+
+
 std::string Pacman::GetMovementString(Movement movement) {
 	switch (movement) {
 	case Movement::mDOWN:
@@ -773,10 +828,13 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode
 	float objCenterY = obj->Y + objRadiusY;
 
 	float dist = sqrt(
-		abs(gitCenterX - objCenterX) + 
-		abs(gitCenterY - objCenterY)
+		pow(gitCenterX - objCenterX, 2) + 
+		pow(gitCenterY - objCenterY, 2)
 	);
-	float range = sqrt(((gitRadiusX + objRadiusX) + (gitRadiusY + objRadiusY)) / 2);
+
+	//NOTE: all sprites are square. width = height
+	// so just use one for simplicity
+	float range = gitRadiusX + objRadiusX;
 
 	//box collision adjustment
 	Rect tmpTarget = Rect(
@@ -787,45 +845,22 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode
 	);
 
 	switch (mode) {
+		// Box (rectangle) Collision
 	case 'b':
 	case 'B':
 		//test for non-collisions
-		/* old check 
-			//is left1 and right1 further left than left2
-		if ((tmpTarget.X < obj->X) &&
-			(tmpTarget.X + tmpTarget.Width < obj->X)) {
-			return false;
-		} else if (
-			//is left1 and right1 further right than right2
-			(tmpTarget.X > obj->X + obj->Width) &&
-			(tmpTarget.X + tmpTarget.Width > obj->X + obj->Width)) {
-			return false;
-		} else if (
-			//is top1 and bot1 are higher than top2
-			(tmpTarget.Y < obj->Y) &&
-			(tmpTarget.Y + tmpTarget.Height < obj->Y)) {
-			return false;
-		} else if (
-			//is top1 and bot1 are lower than bot2
-			(tmpTarget.Y > obj->Y + obj->Height) &&
-			(tmpTarget.Y + tmpTarget.Height > obj->Y + obj->Height)) { 
-			return false;
-			*/
 		//if ((btm1 >= top2) && (top1 <= btm2) && (left1 <= right2) && (right1 >= left2))
-		if (git->Y + git->Height >= obj->Y) {
-			//bot1 > top2
-			return false;
-		} else if (git->Y <= obj->Y + obj->Height) {
+		if (
 			//top1 < bot2
-			return false;
-		} else if (git->X >= obj->X + obj->Width) {
-			//left1 > right2
-			return false;
-		} else if (git->X + git->Width <= obj->X) {
-			//right1 < left2
-			return false;
-		} else {
-		//at this point, there must have been a collision
+			(git->Y < obj->Y + obj->Height) &&
+			//bot1 > top2
+			(git->Y + git->Height > obj->Y) &&
+			//left1 < right2
+			(git->X < obj->X + obj->Width) &&
+			//right1 > left2
+			(git->X + git->Width > obj->X)
+		) {
+			//at this point, there must have been a collision
 			//DEBUG
 			cout << "SAUSAGES!!!" << endl;
 			cout << "TARGET;" <<
@@ -841,8 +876,12 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode
 				"\n Width: " << obj->Width << endl;
 
 			return true;
+		} else {
+			return false;
 		}
 		break;
+
+		// Circle Collision
 	case 'c':
 	case 'C':
 		//test distance of center positions
@@ -894,12 +933,8 @@ void Pacman::CheckViewportCollision(){
 }
 
 void Pacman::UpdatePacman(int elapsedTime){
-	bool nextMoveValid = false;
-	bool currMoveValid = false;
-	bool canTurn = false;
 	Rect tmpRect = Rect();
 	Vector2 tmpDir = Vector2();
-	Vector2i tmpTile = Vector2i();
 	float tmpSpeed = _pacman->speed * elapsedTime;
 	
 	if (_pacman->isBoosting) {
@@ -914,16 +949,10 @@ void Pacman::UpdatePacman(int elapsedTime){
 		}
 	}
 
-	//get player pos
+	//get player pos, rounded
 	Vector2i tmpPos;
-	tmpPos.X = (int)ceil(_pacman->position->X);
-	tmpPos.Y = (int)ceil(_pacman->position->Y);
-
-	if (tmpPos.X % TILE_SIZE == 0 && tmpPos.Y % TILE_SIZE == 0) {
-		canTurn = true;
-	} else {
-		canTurn = false;
-	}
+	tmpPos.X = floor(_pacman->position->X);
+	tmpPos.Y = floor(_pacman->position->Y);
 
 	//Update pacman animation
 	_pacman->currentFrametime += elapsedTime;
@@ -947,33 +976,37 @@ void Pacman::UpdatePacman(int elapsedTime){
 		_pacman->sourceRect->Height
 	);
 
-	tmpTile.X = ceil(_pacman->position->X);//% TILE_SIZE;
-	tmpTile.Y = ceil(_pacman->position->Y);// / TILE_SIZE;
-		
 	// lock pacman's movement to tile grid
 	// by only allowing direction changes when in line with tiles
-	if ((tmpTile.X % TILE_SIZE < tmpSpeed) &&
-		(tmpTile.Y % TILE_SIZE < tmpSpeed)) {
+	if ((tmpPos.X % TILE_SIZE < tmpSpeed) &&
+		(tmpPos.Y % TILE_SIZE < tmpSpeed)) {
 		// test next direction?
-		if (//(_pacman->nextMove != Movement::mSTOP) &&
-			(IsSpaceTile(tmpTile, _pacman->nextMove))) {
+		if (_pacman->nextMove != Movement::mSTOP) {
+			// next tile is a space
+			if ((HasHitWall(tmpPos, _pacman->nextMove))) {
 
-			// set new direction
-			_pacman->currMove = _pacman->nextMove;
-		} else {
+				// set new direction
+				_pacman->currMove = _pacman->nextMove;
+			}
+		}
+
+		// if about to collide with a wall...
+		if (_pacman->currMove != Movement::mSTOP) {
+			
+			// if not a space tile or if a wall tile
+			if (!HasHitWall(tmpPos, _pacman->currMove)) {
+				// re-align to tile grid
+				_pacman->position->X = floor(tmpPos.X / TILE_SIZE)* TILE_SIZE;
+				_pacman->position->Y = floor(tmpPos.Y / TILE_SIZE) * TILE_SIZE;
+				
+				// halt
+				_pacman->currMove = Movement::mSTOP;
+		
+			} else {
+			}
 		}
 	}
-
-	if ((_pacman->currMove != Movement::mSTOP) &&
-		(!IsSpaceTile(tmpTile, _pacman->currMove))) {
-		// halt
-		_pacman->currMove = Movement::mSTOP;
-
-		// re-align to tile grid
-		_pacman->position->X = ceil(tmpTile.X / TILE_SIZE) * TILE_SIZE;
-		_pacman->position->Y = ceil(tmpTile.Y / TILE_SIZE) * TILE_SIZE;
-	}
-
+	
 	// apply tested direction to pacman's direction
 	tmpDir = ApplyMovement(_pacman->currMove, tmpSpeed);
 
@@ -1017,55 +1050,6 @@ Direction Pacman::IsFacing(Movement movement) {
 	}
 }
 
-bool Pacman::IsSpaceTile(Vector2i origin, Movement moveTo) {
-	Vector2i tmpTile = Vector2i();
-	
-	tmpTile.X = origin.X / TILE_SIZE;
-	tmpTile.Y = origin.Y / TILE_SIZE;
-	
-	//if (tmpTile.X > MAP_COLS || tmpTile.Y > MAP_ROWS) {
-	//	return true;
-	//} else {
-
-		switch (moveTo){
-		case Movement::mLEFT:
-			tmpTile.X--;
-			break;
-		case Movement::mRIGHT:
-			tmpTile.X++;
-			break;
-		case Movement::mUP:
-			tmpTile.Y--;
-			break;
-		case Movement::mDOWN:
-			tmpTile.Y++;
-			break;
-		case Movement::mSTOP:
-		default:
-			return true;
-			break;
-		}
-
-		//TODO: check types of tiles that pacman can move on/through
-		switch (map[tmpTile.Y][tmpTile.X]) {
-		case '#':
-			//DEBUG
-			cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is a wall!" << endl;
-			return false;
-			break;
-		case '<':
-		case '>':
-			return true;
-			break;
-		case ' ':
-		default:
-			//DEBUG
-			cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is empty!" << endl;
-			return true;
-			break;
-		}
-	//}
-}
 
 //too ridgid
 Movement Pacman::GetMapMovement(Vector2i tile) {
@@ -1079,13 +1063,13 @@ Movement Pacman::GetMapMovement(Vector2i tile) {
 	}
 }
 
-bool Pacman::WillHitWall(Rect* target, Movement targetMove, float targetSpd) {
+bool Pacman::WillHitWall(Rect* target, Movement targetMove, float targetSpd, bool isPlayer) {
 	Vector2 tmpDir = ApplyMovement(targetMove,targetSpd);
 
 	target->X += tmpDir.X;
 	target->Y += tmpDir.Y;
 
-	if (HasHitWall(target, true, 2, 0)) {
+	if (HasHitWall(target, isPlayer, 2, 0)) {
 		return true;
 	}
 	return false;
@@ -1096,28 +1080,28 @@ Vector2 Pacman::ApplyMovement(Movement direction, float velocity) {
 
 	switch (direction) {
 	case Movement::mDOWN:
-		//Moves Pacman Down Y axis
+		//Moves Down Y axis
 		tmpDir.Y = velocity;
 
 		//Resets X axis
 		tmpDir.X = 0.0f;
 		break;
 	case Movement::mUP:
-		//Moves Pacman up Y axis
+		//Moves up Y axis
 		tmpDir.Y = -velocity;
 
 		//Resets X axis
 		tmpDir.X = 0.0f;
 		break;
 	case Movement::mLEFT:
-		//Moves Pacman Left X axis
+		//Moves Left X axis
 		tmpDir.X = -velocity;
 
 		//Resets X axis
 		tmpDir.Y = 0.0f;
 		break;
 	case Movement::mRIGHT:
-		//Moves Pacman Right X axis
+		//Moves Right X axis
 		tmpDir.X = velocity;
 
 		//Resets Y axis
@@ -1136,6 +1120,8 @@ Vector2 Pacman::ApplyMovement(Movement direction, float velocity) {
 }
 
 void Pacman::UpdateGhost(int elapsedTime) {
+	Vector2i tmpVect;
+
 	// Draw Ghosts
 	for (int i = 0; i < NUM_OF_GHOSTS; i++) {
 		// Animate Ghosts
@@ -1148,15 +1134,12 @@ void Pacman::UpdateGhost(int elapsedTime) {
 			}
 		}
 
+		// Set Facing Direction
 		_ghosts[i]->self.sourceRect->X =
 			_ghosts[i]->self.sourceRect->Width * _ghosts[i]->currFrame;
 
 		_ghosts[i]->self.sourceRect->Y =
 			_ghosts[i]->self.sourceRect->Height * (int)_ghosts[i]->facing;
-		
-		//DEBUG
-		cout << "Ghosts sourceRect X= " << _ghosts[i]->self.sourceRect->X <<
-			" Width= " << _ghosts[i]->self.sourceRect->Width << endl;
 		
 		// Move Ghosts
 		switch (_ghosts[i]->motion) {
@@ -1173,27 +1156,19 @@ void Pacman::UpdateGhost(int elapsedTime) {
 			_ghosts[i]->self.position->X += _ghosts[i]->speed * elapsedTime;
 			break;
 		default:
+			tmpVect.X = _ghosts[i]->self.position->X - (_ghosts[i]->self.sourceRect->Width);
+			tmpVect.Y = _ghosts[i]->self.position->Y - (_ghosts[i]->self.sourceRect->Height);
 			_ghosts[i]->motion = RandomMotion();
 			break;
 		}
 
-		Vector2i tmpVect;
-		/*if (_ghosts[i]->motion == Movement::mLEFT) {
-			tmpVect.X = _ghosts[i]->self.position->X - _ghosts[i]->self.sourceRect->Width;
-		} else {*/
-			tmpVect.X = _ghosts[i]->self.position->X - (_ghosts[i]->self.sourceRect->Width);
-		//}
-
-		/*if (_ghosts[i]->motion == Movement::mUP) {
-			tmpVect.X = _ghosts[i]->self.position->Y - _ghosts[i]->self.sourceRect->Height;
-		} else {*/
-			tmpVect.Y = _ghosts[i]->self.position->Y - (_ghosts[i]->self.sourceRect->Height);
-		//}
 		
 		// Check collisions
-		if (!IsSpaceTile(tmpVect, _ghosts[i]->motion)) {
-			_ghosts[i]->motion = Movement::mSTOP;
+		if (!HasHitWall(tmpVect, _ghosts[i]->motion)) {
+			//_ghosts[i]->motion = Movement::mSTOP;
+			_ghosts[i]->motion = RandomMotion();
 		}
+
 
 		// Move ghosts out of base
 		if (_ghosts[i]->isAlive && _ghosts[i]->isSafe) {

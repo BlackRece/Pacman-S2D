@@ -1,9 +1,9 @@
-#pragma once
 #define TILE_SIZE 32
 #define MAX_ELEMENTS 644
-#define WWIDTH 1024
+#define WWIDTH 1028
 #define WHEIGHT 768
 #define NUM_OF_MUNCHIES 210
+#define MUNCHIE_SIZE 16
 #define MAP_ROWS 23
 #define MAP_COLS 27
 #define NUM_OF_GHOSTS 4
@@ -50,6 +50,7 @@ struct Player {
 	int frame; 
 	int currentFrametime;
 	Direction facing;
+	int lives;
 
 	Vector2* position;
 	Vector2* direction;
@@ -216,13 +217,13 @@ private:
 
 	bool HasHitWall(Rect* target, bool isPlayer, float targetTolerance = 0, float wallTolerance = 0);
 
+	bool HasHitWall(Vector2i origin, Movement moveTo);
+
 	bool HasTargetHitObject(Rect* git, Rect* obj, float tolerance = 0, char mode = 'c');
 
-	void Input(int elapsedTime, Input::KeyboardState* state);
+	void Input(int elapsedTime, Input::KeyboardState* state, Input::MouseState* mouseState);
 
 	Direction IsFacing(Movement movement);
-
-	bool IsSpaceTile(Vector2i origin, Movement moveTo);
 
 	Movement RandomMotion();
 
@@ -236,7 +237,7 @@ private:
 
 	void UpdatePacman(int elapsedTime);
 
-	bool WillHitWall(Rect* target, Movement targetMove, float targetSpd);
+	bool WillHitWall(Rect* target, Movement targetMove, float targetSpd, bool isPlayer = true);
 
 
 public:
