@@ -124,6 +124,7 @@ struct Enemy {
 
 	Direction facing;
 	Movement motion;
+	Movement nextMove;
 	float speed;
 };
 
@@ -199,6 +200,8 @@ private:
 
 	void CheckViewportCollision();
 
+	void CheckViewportCollision(float& X, float& Y, int& Width, int& Height);
+
 	void DeleteEntity(Entity* obj);
 
 	void DeleteMenu(Menu* obj);
@@ -213,6 +216,8 @@ private:
 	
 	Movement GetMapMovement(Vector2i tile);
 	
+	bool GetMapTile(int row, int col, char tile);
+
 	std::string GetMovementString(Movement movement);
 
 	bool HasHitWall(Rect* target, bool isPlayer, float targetTolerance = 0, float wallTolerance = 0);
@@ -224,6 +229,8 @@ private:
 	void Input(int elapsedTime, Input::KeyboardState* state, Input::MouseState* mouseState);
 
 	Direction IsFacing(Movement movement);
+
+	Movement NotSoRandomMotion(Vector2i pos);
 
 	Movement RandomMotion();
 

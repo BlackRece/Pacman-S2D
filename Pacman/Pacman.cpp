@@ -305,7 +305,6 @@ void Pacman::InitialiseGhosts() {
 		_ghosts[i]->self.sourceRect = new Rect();
 		_ghosts[i]->self.position = new Rect();
 		_ghosts[i]->self.texture = new Texture2D();
-		//_ghosts[i]->self.texture = _ghostTexture;
 		_ghosts[i]->currFrame = 0;
 		_ghosts[i]->maxFrame = 2;
 		_ghosts[i]->isAlive = true;
@@ -313,7 +312,8 @@ void Pacman::InitialiseGhosts() {
 		_ghosts[i]->isSafe = true;
 		_ghosts[i]->speed = 0.1f;
 		_ghosts[i]->facing = Direction::dDOWN;
-		_ghosts[i]->motion = Movement::mDOWN;
+		_ghosts[i]->motion = Movement::mSTOP;
+		_ghosts[i]->nextMove = Movement::mSTOP;
 	}
 }
 
@@ -435,6 +435,14 @@ void Pacman::Update(int elapsedTime) {
 		UpdateGhost(elapsedTime);
 		CheckViewportCollision();
 		CheckPacmanCollision();
+		for (int i = 0; i < NUM_OF_GHOSTS; i++) {
+			CheckViewportCollision(
+				_ghosts[i]->self.position->X,
+				_ghosts[i]->self.position->Y,
+				_ghosts[i]->self.sourceRect->Width,
+				_ghosts[i]->self.sourceRect->Height
+			);
+		}
 	}
 }
 
@@ -451,11 +459,15 @@ void Pacman::Draw(int elapsedTime) {
 	// Allows us to easily create a string
 	std::stringstream stream, streamDirection, streamScore;
 	stream << "Pacman X: " << _pacman->position->X << " Y: " << _pacman->position->Y;
+	/*
 	streamDirection << "Direction X: " << _pacman->direction->X << " Y: " << _pacman->direction->Y//;
-	//streamDirection << "LastMovement: " << GetMovementString(_pacman->lastMove) <<
+	streamDirection << "LastMovement: " << GetMovementString(_pacman->lastMove) <<
 		<< "CurrentMovement: " << GetMovementString(_pacman->currMove) <<
 		" NextMovement: " << GetMovementString(_pacman->nextMove);
-	//streamDirection << "Boost: " << _pacman->boostDuration << " Fear Timer: " << _ghostFearTimer;
+	*/
+	streamDirection << "Boost: " << _pacman->boostDuration << 
+		" Fear Timer: " << _ghostFearTimer <<
+		" Ghost[1]->motion = " << (int)_ghosts[0]->motion;
 	streamScore << "Score : " << _pacman->score;
 
 	SpriteBatch::BeginDraw(); // Starts Drawing
@@ -473,12 +485,6 @@ void Pacman::Draw(int elapsedTime) {
 				Vector2::Zero,
 				_munchies[i]->scale,
 				0.0f, Color::White, SpriteEffect::NONE);
-
-			//DEBUG
-			/*if (_munchies[i]->isPowerPellet) {
-				cout << "PowerPellet [" << _munchies[i]->self.position->X << "][" <<
-					_munchies[i]->self.position->Y << "] found!" << endl;
-			}*/
 		}
 	}
 
@@ -544,6 +550,10 @@ void Pacman::Draw(int elapsedTime) {
 	
 	if (_pause->_menu) {
 		std::stringstream menuStream;
+
+		// pause pacman animation
+		_pacman->currentFrametime = 0;
+
 		if (_start->_menu) {
 			menuStream << "_.-| Press SPACE BAR to start |-._";
 			_start->_stringPosition->X = WWIDTH / 2.5f;
@@ -555,8 +565,8 @@ void Pacman::Draw(int elapsedTime) {
 		SpriteBatch::Draw(_pause->_backGround, _pause->_rect, nullptr);
 		SpriteBatch::DrawRectangle(_pause->_textRect, Color::Red);
 		SpriteBatch::DrawString(menuStream.str().c_str(), _pause->_stringPosition, Color::Green);
-	}
-	else {
+	} else {
+		// enable munchie animations
 		_frameCount++;
 
 		// Draws String
@@ -932,6 +942,25 @@ void Pacman::CheckViewportCollision(){
 	}
 }
 
+void Pacman::CheckViewportCollision(float& X, float& Y, int& Width, int& Height) {
+	/* wrap-around */
+	if (Y < 0.0f) {
+		Y = WHEIGHT - Height;
+	}
+
+	if (Y > WHEIGHT - Height) {
+		Y = 0.0f;
+	}
+
+	if (X < 0.0f) {
+		X = WWIDTH - Width;
+	}
+
+	if (X > WWIDTH - Width) {
+		X = 0.0f;
+	}
+}
+
 void Pacman::UpdatePacman(int elapsedTime){
 	Rect tmpRect = Rect();
 	Vector2 tmpDir = Vector2();
@@ -976,8 +1005,11 @@ void Pacman::UpdatePacman(int elapsedTime){
 		_pacman->sourceRect->Height
 	);
 
-	// lock pacman's movement to tile grid
-	// by only allowing direction changes when in line with tiles
+	/* NOTE:
+		lock ghosts' movement to tile grid by only
+		allowing direction changes when in line
+		with map tile same a pacman.
+	*/
 	if ((tmpPos.X % TILE_SIZE < tmpSpeed) &&
 		(tmpPos.Y % TILE_SIZE < tmpSpeed)) {
 		// test next direction?
@@ -992,21 +1024,22 @@ void Pacman::UpdatePacman(int elapsedTime){
 
 		// if about to collide with a wall...
 		if (_pacman->currMove != Movement::mSTOP) {
-			
+
 			// if not a space tile or if a wall tile
 			if (!HasHitWall(tmpPos, _pacman->currMove)) {
 				// re-align to tile grid
-				_pacman->position->X = floor(tmpPos.X / TILE_SIZE)* TILE_SIZE;
+				_pacman->position->X = floor(tmpPos.X / TILE_SIZE) * TILE_SIZE;
 				_pacman->position->Y = floor(tmpPos.Y / TILE_SIZE) * TILE_SIZE;
-				
+
 				// halt
 				_pacman->currMove = Movement::mSTOP;
-		
-			} else {
+
+			}
+			else {
 			}
 		}
 	}
-	
+
 	// apply tested direction to pacman's direction
 	tmpDir = ApplyMovement(_pacman->currMove, tmpSpeed);
 
@@ -1024,7 +1057,7 @@ void Pacman::UpdatePacman(int elapsedTime){
 	// apply direction to position
 	_pacman->position->Y += _pacman->direction->Y;
 	_pacman->position->X += _pacman->direction->X;
-		
+
 	// store last movement
 	_pacman->lastMove = _pacman->currMove;
 }
@@ -1121,9 +1154,17 @@ Vector2 Pacman::ApplyMovement(Movement direction, float velocity) {
 
 void Pacman::UpdateGhost(int elapsedTime) {
 	Vector2i tmpVect;
+	float tmpSpeed;
 
 	// Draw Ghosts
 	for (int i = 0; i < NUM_OF_GHOSTS; i++) {
+		// Get Ghosts' speed
+		tmpSpeed = _ghosts[i]->speed * elapsedTime;
+
+		// Get Ghosts' normalized position
+		tmpVect.X = floor(_ghosts[i]->self.position->X);
+		tmpVect.Y = floor(_ghosts[i]->self.position->Y);
+
 		// Animate Ghosts
 		if (_frameCount % 15 == 0) {
 			if (_ghosts[i]->currFrame < _ghosts[i]->maxFrame) {
@@ -1134,47 +1175,71 @@ void Pacman::UpdateGhost(int elapsedTime) {
 			}
 		}
 
-		// Set Facing Direction
+		// Set Animation Frame
 		_ghosts[i]->self.sourceRect->X =
 			_ghosts[i]->self.sourceRect->Width * _ghosts[i]->currFrame;
 
+		// Set Facing Direction
 		_ghosts[i]->self.sourceRect->Y =
 			_ghosts[i]->self.sourceRect->Height * (int)_ghosts[i]->facing;
-		
+
+		/* NOTE:
+			lock ghosts' movement to tile grid by only
+			allowing direction changes when in line
+			with map tile same a pacman.
+			( see UpdatePacman function)
+		*/
+		if ((tmpVect.X % TILE_SIZE < tmpSpeed) &&
+			(tmpVect.Y % TILE_SIZE < tmpSpeed)) {
+			//test direction
+			if (_ghosts[i]->motion != Movement::mSTOP) {
+				// Check map collisions
+				if (!HasHitWall(tmpVect, _ghosts[i]->motion)) {
+					_ghosts[i]->motion = NotSoRandomMotion(tmpVect);
+				} else {
+				}
+			} else {
+				// if stopped
+				// align to tile grid
+				_ghosts[i]->self.position->X = floor(tmpVect.X / TILE_SIZE) * TILE_SIZE;
+				_ghosts[i]->self.position->Y = floor(tmpVect.Y / TILE_SIZE) * TILE_SIZE;
+
+				// choose a direction
+				_ghosts[i]->motion = NotSoRandomMotion(tmpVect);
+			}
+
+			if (GetMapTile(
+				floor(tmpVect.Y / TILE_SIZE),
+				floor(tmpVect.X / TILE_SIZE),
+				'^')) {
+				_ghosts[i]->motion = Movement::mUP;
+			}
+		}
+
 		// Move Ghosts
 		switch (_ghosts[i]->motion) {
 		case Movement::mDOWN:
-			_ghosts[i]->self.position->Y += _ghosts[i]->speed * elapsedTime;
+			_ghosts[i]->self.position->Y += tmpSpeed;
 			break;
 		case Movement::mUP:
-			_ghosts[i]->self.position->Y -= _ghosts[i]->speed * elapsedTime;
+			_ghosts[i]->self.position->Y -= tmpSpeed;
 			break;
 		case Movement::mLEFT:
-			_ghosts[i]->self.position->X -= _ghosts[i]->speed * elapsedTime;
+			_ghosts[i]->self.position->X -= tmpSpeed;
 			break;
 		case Movement::mRIGHT:
-			_ghosts[i]->self.position->X += _ghosts[i]->speed * elapsedTime;
+			_ghosts[i]->self.position->X += tmpSpeed;
 			break;
 		default:
-			tmpVect.X = _ghosts[i]->self.position->X - (_ghosts[i]->self.sourceRect->Width);
-			tmpVect.Y = _ghosts[i]->self.position->Y - (_ghosts[i]->self.sourceRect->Height);
-			_ghosts[i]->motion = RandomMotion();
+			_ghosts[i]->self.position->X = floor(tmpVect.X / TILE_SIZE) * TILE_SIZE;
+			_ghosts[i]->self.position->Y = floor(tmpVect.Y / TILE_SIZE) * TILE_SIZE;
 			break;
 		}
-
-		
-		// Check collisions
-		if (!HasHitWall(tmpVect, _ghosts[i]->motion)) {
-			//_ghosts[i]->motion = Movement::mSTOP;
-			_ghosts[i]->motion = RandomMotion();
-		}
-
 
 		// Move ghosts out of base
 		if (_ghosts[i]->isAlive && _ghosts[i]->isSafe) {
-			switch (map[tmpVect.Y / TILE_SIZE][tmpVect.X / TILE_SIZE]) {
+			switch (map	[tmpVect.Y / TILE_SIZE][tmpVect.X / TILE_SIZE]) {
 			case '^':
-				_ghosts[i]->motion = Movement::mUP;
 				break;
 			case '-':
 			case 'G':
@@ -1188,11 +1253,16 @@ void Pacman::UpdateGhost(int elapsedTime) {
 			}
 		}
 
-		_ghosts[i]->facing = IsFacing(_ghosts[i]->motion);
+		// Set Facing direction to match Motion direction
+		if (_ghosts[i]->motion != Movement::mSTOP) {
+			_ghosts[i]->facing = IsFacing(_ghosts[i]->motion);
+		}
 
+		// Manage Fear/Chasing States
 		if (_ghostFearTimer > 0) {
 			_ghostFearTimer--;
-		} else {
+		}
+		else {
 			_ghosts[i]->isChasing = true;
 		}
 	}
@@ -1213,6 +1283,46 @@ Movement Pacman::RandomMotion() {
 		return Movement::mUP;
 		break;
 	}
+}
+
+Movement Pacman::NotSoRandomMotion(Vector2i pos) {
+	Movement result = Movement::mSTOP;
+	Movement moves[4] = {						// array of movement choices available
+		Movement::mSTOP, Movement::mSTOP,
+		Movement::mSTOP, Movement::mSTOP
+	};
+
+	int checkMoves = 0;							// counter to check number of moves available
+	int row = floor(pos.Y / TILE_SIZE);
+	int col = floor(pos.X / TILE_SIZE);
+
+	// fill array with available movements
+	moves[0] = GetMapTile(row, col - 1, '#') ? Movement::mSTOP : Movement::mLEFT;
+	moves[1] = GetMapTile(row, col + 1, '#') ? Movement::mSTOP : Movement::mRIGHT;
+	moves[2] = GetMapTile(row + 1, col, '#') ? Movement::mSTOP : Movement::mUP;
+	moves[3] = GetMapTile(row - 1, col, '#') ? Movement::mSTOP : Movement::mDOWN;
+
+	// count available movements
+	for (int i = 0; i < 4; i++) {
+		if (moves[i] != Movement::mSTOP) {
+			checkMoves++;
+		}
+	}
+
+	// if more than one movement available...
+	if (checkMoves > 1) {
+		// randomly choose an available move
+		while (result == Movement::mSTOP) {
+			result = moves[rand() % 4];
+		}
+	}
+
+	// return chosen move
+	return result;
+}
+
+bool Pacman::GetMapTile(int row, int col, char tile) {
+	return map[row][col] == tile ? true : false;
 }
 
 void Pacman::ScareGhosts() {
