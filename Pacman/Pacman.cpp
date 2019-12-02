@@ -382,14 +382,16 @@ void Pacman::DefineMap() {
 				_wallCounter++;
 				break;
 			case 'G':
-				_ghosts[_ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
-				_ghosts[_ghostCounter]->self.position = new Rect(
-					col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
-				);
-				_ghosts[_ghostCounter]->isAlive = true;
-				_ghosts[_ghostCounter]->isChasing = true;
+				if (_ghostCounter < NUM_OF_GHOSTS) {
+					_ghosts[_ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
+					_ghosts[_ghostCounter]->self.position = new Rect(
+						col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
+					);
+					_ghosts[_ghostCounter]->isAlive = true;
+					_ghosts[_ghostCounter]->isChasing = true;
 
-				_ghostCounter++;
+					_ghostCounter++;
+				}
 				break;
 			default:
 				break;
@@ -697,7 +699,7 @@ void Pacman::CheckPacmanCollision() {
 				if (_munchies[i]->isPowerPellet) {
 					ScareGhosts();
 				}
-
+				
 				//DEBUG
 				cout << "Eaten munchie at X:" << _munchies[i]->self.position->X <<
 					" Y:" << _munchies[i]->self.position->Y << endl;
@@ -1208,11 +1210,44 @@ void Pacman::UpdateGhost(int elapsedTime) {
 				_ghosts[i]->motion = NotSoRandomMotion(tmpVect);
 			}
 
+			// Move ghosts out of base
 			if (GetMapTile(
 				floor(tmpVect.Y / TILE_SIZE),
 				floor(tmpVect.X / TILE_SIZE),
 				'^')) {
 				_ghosts[i]->motion = Movement::mUP;
+			}
+		} else {
+			//DEBUG
+			// keep ghost off of walls due to frame skips
+			if (GetMapTile(
+				floor(tmpVect.Y / TILE_SIZE),
+				floor(tmpVect.X / TILE_SIZE),
+				'#')) {
+				// Move Ghosts
+				switch (_ghosts[i]->motion) {
+				case Movement::mDOWN:
+					_ghosts[i]->self.position->Y -= TILE_SIZE;
+					break;
+				case Movement::mUP:
+					_ghosts[i]->self.position->Y += TILE_SIZE;
+					break;
+				case Movement::mLEFT:
+					_ghosts[i]->self.position->X += TILE_SIZE;
+					break;
+				case Movement::mRIGHT:
+					_ghosts[i]->self.position->X -= TILE_SIZE;
+					break;
+				default:
+					/*
+					_ghosts[i]->self.position->X = floor(tmpVect.X / TILE_SIZE) * TILE_SIZE;
+					_ghosts[i]->self.position->Y = floor(tmpVect.Y / TILE_SIZE) * TILE_SIZE;
+					*/
+					break;
+				}
+
+				// stop ghost from moving further off track
+				_ghosts[i]->motion = Movement::mSTOP;
 			}
 		}
 
@@ -1236,7 +1271,6 @@ void Pacman::UpdateGhost(int elapsedTime) {
 			break;
 		}
 
-		// Move ghosts out of base
 		if (_ghosts[i]->isAlive && _ghosts[i]->isSafe) {
 			switch (map	[tmpVect.Y / TILE_SIZE][tmpVect.X / TILE_SIZE]) {
 			case '^':
@@ -1299,8 +1333,8 @@ Movement Pacman::NotSoRandomMotion(Vector2i pos) {
 	// fill array with available movements
 	moves[0] = GetMapTile(row, col - 1, '#') ? Movement::mSTOP : Movement::mLEFT;
 	moves[1] = GetMapTile(row, col + 1, '#') ? Movement::mSTOP : Movement::mRIGHT;
-	moves[2] = GetMapTile(row + 1, col, '#') ? Movement::mSTOP : Movement::mUP;
-	moves[3] = GetMapTile(row - 1, col, '#') ? Movement::mSTOP : Movement::mDOWN;
+	moves[2] = GetMapTile(row - 1, col, '#') ? Movement::mSTOP : Movement::mUP;
+	moves[3] = GetMapTile(row + 1, col, '#') ? Movement::mSTOP : Movement::mDOWN;
 
 	// count available movements
 	for (int i = 0; i < 4; i++) {
@@ -1315,6 +1349,9 @@ Movement Pacman::NotSoRandomMotion(Vector2i pos) {
 		while (result == Movement::mSTOP) {
 			result = moves[rand() % 4];
 		}
+	} else {
+		cout << "Ghost at " << pos.X << " x " << pos.Y <<
+			"\nOnly ONE possible direction?!" << endl;
 	}
 
 	// return chosen move
@@ -1348,3 +1385,54 @@ void Pacman::UpdateMunchie(int elapsedTime){
 		}
 	}
 }
+
+/*
+because S2D doesn't allow the use of custom fonts because fonts hard-coded
+create a function/method to handle the font I want
+
+How?
+- load the texture
+- allocate characters to each glyph in font spite sheet
+- draw composite sprites to location
+
+*/
+/*
+void Pacman::DrawString(const char* text, int len, Vector2i pos) {
+	Texture2D font = Texture2D();
+	font.Load("Textures/DeLarge.tga",false);
+	Rect charPos, glyphPos, stringPos;
+
+
+
+	for (int i = 0; i < len; i++) {
+		switch (toupper(text[i])) {
+		case 'A':
+			break;
+		case 'C':
+			break;
+		case 'P':
+			break;
+		case 'M':
+			break;
+		case 'N':
+			break;
+		default:
+			break;
+		}
+	}
+
+}
+*/
+/*
+void SpriteBatch::DrawString(const char* text, const Vector2* position, const Color* color)
+{
+	glPushMatrix();
+	glDisable(GL_TEXTURE_2D);
+	glColor4f(color->R, color->G, color->B, color->A);
+	glRasterPos2f(position->X, position->Y);
+	glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char*)text);
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	glEnable(GL_TEXTURE_2D);
+	glPopMatrix();
+}
+*/

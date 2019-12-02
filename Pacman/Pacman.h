@@ -6,7 +6,7 @@
 #define MUNCHIE_SIZE 16
 #define MAP_ROWS 23
 #define MAP_COLS 27
-#define NUM_OF_GHOSTS 4
+#define NUM_OF_GHOSTS 8
 
 // If Windows and not in Debug, this will run without a console window
 // You can use this to output information when debugging using cout or cerr
@@ -213,6 +213,8 @@ private:
 	void DeleteSelf(Entity* obj);
 
 	void DeleteMunchie(Munchie* obj);
+	
+	void DrawString(const char* text, int len);
 	
 	Movement GetMapMovement(Vector2i tile);
 	
