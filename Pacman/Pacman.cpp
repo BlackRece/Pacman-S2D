@@ -34,11 +34,30 @@ Pacman::Pacman(int argc, char* argv[]) :
 	// initialise walls
 	_wallTexture = new Texture2D();
 	_wallScale = 1.0f;
-	//Obstacle* _walls[NUM_OF_WALLS] = { nullptr };
-
+	
+	// Collectables
 	// initialise munchies
 	_munchieTexture = new Texture2D();
-	//Munchie* _munchies[NUM_OF_MUNCHIES] = { nullptr };
+	
+	// initialise fruits
+	_fruitTexture = new Texture2D();
+	_fruits = new Bonus();
+	_fruits->self = Entity();
+	_fruits->self.texture = new Texture2D();
+	_fruits->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
+	_fruits->self.position = new Rect();
+	_fruits->isShown = false;
+	_fruits->spawn = false;
+	_fruits->value = 100;
+	_fruits->num = 0;
+	_fruits->maxNum = 8;
+	_fruits->curFrames = 0;
+	_fruits->maxFrames = 2;	
+
+	// initialise power ups
+	_powerUp = new Bonus();
+	_powerUp->self.texture = new Texture2D();
+	//_powerTexture = new Texture2D();
 
 	// initialise ghosts
 	_ghostTexture = new Texture2D();
@@ -107,8 +126,8 @@ Pacman::~Pacman()
 	}
 	delete _ghosts;
 
-	DeleteEntity(&_cherry->self);
-	delete _cherry;
+	DeleteEntity(&_fruits->self);
+	delete _fruits;
 
 	DeleteEntity(&_powerUp->self);
 	delete _powerUp;
@@ -204,6 +223,13 @@ void Pacman::LoadContent()
 		}
 	}
 
+	// Load Fruits
+	_fruitTexture->Load("Textures/Bonus.png", true);
+	_fruits->self.texture = _fruitTexture;
+
+	// Load Bonus
+	_powerUp->self.texture->Load("Textures/Bonus.png", false);
+
 	// Load Menu Images
 	_pause->_backGround->Load("Textures/Transparency.png", false);
 	_start->_backGround->Load("Textures/Transparency.png", false);
@@ -211,7 +237,6 @@ void Pacman::LoadContent()
 	/* TODO
 	 * ====
 	 * 
-	 * - Load Ghosts/Enemies
 	 * - Load Pills/Pickups/Fruit/Power-Ups
 	 */
 
@@ -393,6 +418,13 @@ void Pacman::DefineMap() {
 					_ghostCounter++;
 				}
 				break;
+			case 'B':
+				_fruits->isShown = true;
+				_fruits->spawn = true;
+				_fruits->self.position = new Rect(
+					col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
+				);
+				break;
 			default:
 				break;
 			}
@@ -435,6 +467,7 @@ void Pacman::Update(int elapsedTime) {
 		UpdatePacman(elapsedTime);
 		UpdateMunchie(elapsedTime);
 		UpdateGhost(elapsedTime);
+		UpdateBonuses(elapsedTime);
 		CheckViewportCollision();
 		CheckPacmanCollision();
 		for (int i = 0; i < NUM_OF_GHOSTS; i++) {
@@ -545,6 +578,16 @@ void Pacman::Draw(int elapsedTime) {
 		}
 	}
 
+	// Draw Fruits
+	if (_fruits->isShown) {
+		SpriteBatch::Draw(
+			_fruits->self.texture,
+			_fruits->self.position,
+			_fruits->self.sourceRect,
+			Vector2::Zero, 1.0f, 0.0f,
+			Color::White, SpriteEffect::NONE);
+	}
+
 	// Reset animation loop
 	if (_frameCount >= 60) {
 		_frameCount = 0;
@@ -628,7 +671,7 @@ void Pacman::Input(int elapsedTime,
 			}
 		}
 		
-		// Gets the current state of the mouse
+		// Gets the current state of the left mouse button
 		if (mouseState->LeftButton == Input::ButtonState::PRESSED) {
 			//DEBUG
 			//cout << "next move is > " << static_cast<int>(_pacman->nextMove) << endl;
@@ -640,7 +683,33 @@ void Pacman::Input(int elapsedTime,
 				map[mTile.Y][mTile.X] << ")";
 
 		}
+
+		// Gets the current state of right mouse button
+		if (mouseState->RightButton == Input::ButtonState::PRESSED) {
+			//to be refactored into a function
+			if (!_fruits->isShown) {
+				Vector2i fTile = GetRandomTile('.');
+				_fruits->isShown = true;
+				_fruits->spawn = true;
+				_fruits->self.position = new Rect(
+					fTile.X * TILE_SIZE,
+					fTile.Y * TILE_SIZE,
+					TILE_SIZE, TILE_SIZE
+				);
+
+				//DEBUG
+				//cout << "FRUIT AT " << _fruits->self.position->X << ", " <<
+				//	_fruits->self.position->Y << endl;
+			}
+		}
 	}
+}
+
+void UpdateBonuses(int elapsedTime) {
+	// Draw Bonuses & PowerUps
+	/*if (_frameCount % 20 == 0) {
+		_fruits->self.source
+	}*/
 }
 
 void Pacman::CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey, Input::Keys startKey){
@@ -701,9 +770,30 @@ void Pacman::CheckPacmanCollision() {
 				}
 				
 				//DEBUG
-				cout << "Eaten munchie at X:" << _munchies[i]->self.position->X <<
-					" Y:" << _munchies[i]->self.position->Y << endl;
+				//cout << "Eaten munchie at X:" << _munchies[i]->self.position->X <<
+				//	" Y:" << _munchies[i]->self.position->Y << endl;
 			}
+		}
+	}
+
+	if (_fruits->isShown) {
+		if (HasTargetHitObject(&tmpRect, _fruits->self.position)) {
+			// hide fruit
+			_fruits->isShown = false;
+
+			//update score
+			_pacman->score += _fruits->value * _fruits->num;
+
+			//play sound fx
+
+			//select next fruit
+			if (_fruits->num >= _fruits->maxNum) {
+				_fruits->num = 0;
+			} else {
+				_fruits->num++;
+			}
+
+			//reset delay
 		}
 	}
 }
@@ -785,7 +875,7 @@ bool Pacman::HasHitWall(Vector2i origin, Movement moveTo) {
 	switch (map[tmpTile.Y][tmpTile.X]) {
 	case '#':
 		//DEBUG
-		cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is a wall!" << endl;
+		//cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is a wall!" << endl;
 		return false;
 		break;
 	case '<':
@@ -795,7 +885,7 @@ bool Pacman::HasHitWall(Vector2i origin, Movement moveTo) {
 	case ' ':
 	default:
 		//DEBUG
-		cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is empty!" << endl;
+		//cout << "Tile at[" << tmpTile.Y << "][" << tmpTile.X << "] is empty!" << endl;
 		return true;
 		break;
 	}
@@ -907,6 +997,7 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode
 			*/
 
 			//pythag
+			/*
 			cout << "Pythag Collison:" <<
 				"\nabs(gitCenterX - objCenterX) = " <<
 				gitCenterX << " - " << objCenterX << " = " << abs(gitCenterX - objCenterX) <<
@@ -914,6 +1005,7 @@ bool Pacman::HasTargetHitObject(Rect* git, Rect* obj, float tolerance, char mode
 				gitCenterY << " - " << objCenterY << " = " << abs(gitCenterY - objCenterY) << endl;
 			cout << "Target Distance = " << dist <<
 				" Collision Range = " << range << endl;
+			*/
 			return true;
 		} else {
 			return false;
@@ -1154,6 +1246,26 @@ Vector2 Pacman::ApplyMovement(Movement direction, float velocity) {
 	return tmpDir;
 }
 
+void Pacman::UpdateBonuses(int elapsedTime) {
+	// Select current/correct frame
+	if (_frameCount % 30 == 0) {
+		
+		if (_fruits->curFrames < _fruits->maxFrames) {
+			_fruits->curFrames++;
+		} else {
+			_fruits->curFrames = 0;
+		}
+	}
+
+	// Select current fruit
+	_fruits->self.sourceRect->X =
+		_fruits->self.sourceRect->Width * _fruits->num;
+
+	// Select version of fruit
+	_fruits->self.sourceRect->Y =
+		_fruits->self.sourceRect->Height * _fruits->curFrames;
+}
+
 void Pacman::UpdateGhost(int elapsedTime) {
 	Vector2i tmpVect;
 	float tmpSpeed;
@@ -1350,8 +1462,8 @@ Movement Pacman::NotSoRandomMotion(Vector2i pos) {
 			result = moves[rand() % 4];
 		}
 	} else {
-		cout << "Ghost at " << pos.X << " x " << pos.Y <<
-			"\nOnly ONE possible direction?!" << endl;
+		//cout << "Ghost at " << pos.X << " x " << pos.Y <<
+		//	"\nOnly ONE possible direction?!" << endl;
 	}
 
 	// return chosen move
@@ -1360,6 +1472,29 @@ Movement Pacman::NotSoRandomMotion(Vector2i pos) {
 
 bool Pacman::GetMapTile(int row, int col, char tile) {
 	return map[row][col] == tile ? true : false;
+}
+
+Vector2i Pacman::GetRandomTile(char tile) {
+	int counter = 0;
+	vector<Vector2i> tmpArray(0);
+	Vector2i tmpVect = Vector2i();
+
+	for (int row = 0; row < MAP_ROWS; row++) {
+		for (int col = 0; col < MAP_COLS; col++) {
+			if (map[row][col] == tile) {
+				tmpVect.X = col;
+				tmpVect.Y = row;
+
+				tmpArray.push_back(tmpVect);
+
+				counter++;
+			}
+		}
+	}
+
+	return tmpArray[rand() % counter + 1];
+
+	//return Vector2i();
 }
 
 void Pacman::ScareGhosts() {

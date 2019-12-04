@@ -7,6 +7,7 @@
 #define MAP_ROWS 23
 #define MAP_COLS 27
 #define NUM_OF_GHOSTS 8
+#define NUM_OF_FRUITS 8
 
 // If Windows and not in Debug, this will run without a console window
 // You can use this to output information when debugging using cout or cerr
@@ -109,7 +110,11 @@ struct Bonus {
 
 	bool spawn;
 	bool isShown;
-	int value;
+	int num;		// current fruit ID
+	int maxNum;		// maximum number of fruit (as per sprite sheet)
+	int value;		// value of fruit
+	int curFrames;	// current frames
+	int maxFrames;	// max number of frames
 };
 
 //data for ghosts
@@ -167,8 +172,12 @@ private:
 	Munchie* _munchies[NUM_OF_MUNCHIES] = { nullptr };
 	Texture2D* _munchieTexture;
 
-	Bonus* _cherry;
+	// data to represent collectables
+	Bonus* _fruits;
+	Texture2D* _fruitTexture;
+
 	Bonus* _powerUp;
+	//Texture2D* _powerTexture;
 
 	//data to represent border
 	const static int NUM_OF_WALLS = MAX_ELEMENTS - NUM_OF_MUNCHIES;
@@ -190,6 +199,7 @@ private:
 	int score = 0;
 
 	Vector2 ApplyMovement(Movement direction, float velocity);
+
 
 
 	void CheckPacmanCollision();
@@ -222,6 +232,8 @@ private:
 
 	std::string GetMovementString(Movement movement);
 
+	Vector2i GetRandomTile(char tile);
+
 	bool HasHitWall(Rect* target, bool isPlayer, float targetTolerance = 0, float wallTolerance = 0);
 
 	bool HasHitWall(Vector2i origin, Movement moveTo);
@@ -237,6 +249,8 @@ private:
 	Movement RandomMotion();
 
 	void ScareGhosts();
+
+	void UpdateBonuses(int elapsedTime);
 
 	void UpdateCherry(int elapsedTime);
 
