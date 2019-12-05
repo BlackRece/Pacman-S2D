@@ -121,13 +121,15 @@ struct Munchie {
 struct Bonus {
 	Entity self;
 
-	bool spawn;
+	int spawnMaxTime;	// maximum duration before timer resets
+	int spawnTimer;		// current counter 
+	int spawnDelay;		// ...
 	bool isShown;
-	int num;		// current fruit ID
-	int maxNum;		// maximum number of fruit (as per sprite sheet)
-	int value;		// value of fruit
-	int curFrames;	// current frames
-	int maxFrames;	// max number of frames
+	int num;			// current fruit ID
+	int maxNum;			// maximum number of fruit (as per sprite sheet)
+	int value;			// value of fruit
+	int curFrames;		// current frames
+	int maxFrames;		// max number of frames
 };
 
 //data for ghosts
@@ -272,6 +274,8 @@ private:
 
 	void ScareGhosts();
 
+	void SpawnFruit();
+	
 	void UpdateBonuses(int elapsedTime);
 
 	void UpdateCherry(int elapsedTime);

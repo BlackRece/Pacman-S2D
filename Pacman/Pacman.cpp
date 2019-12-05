@@ -48,7 +48,9 @@ Pacman::Pacman(int argc, char* argv[]) :
 	_fruits->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
 	_fruits->self.position = new Rect();
 	_fruits->isShown = false;
-	_fruits->spawn = false;
+	_fruits->spawnMaxTime = 200;
+	_fruits->spawnTimer = 0;
+	_fruits->spawnDelay = _fruits->spawnMaxTime / 2;
 	_fruits->value = 100;
 	_fruits->num = 0;
 	_fruits->maxNum = 8;
@@ -63,7 +65,7 @@ Pacman::Pacman(int argc, char* argv[]) :
 	// initialise ghosts
 	_ghostTexture = new Texture2D();
 	_ghostFearTimer = 0;
-	_ghostFearTimerMax = 1500;
+	_ghostFearTimerMax = 3000;
 	
 	// initialise menu and pause states
 	// pause
@@ -435,7 +437,6 @@ void Pacman::DefineMap() {
 				break;
 			case 'B':
 				_fruits->isShown = true;
-				_fruits->spawn = true;
 				_fruits->self.position = new Rect(
 					col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
 				);
@@ -531,13 +532,16 @@ void Pacman::Draw(int elapsedTime) {
 
 	// Allows us to easily create a string
 	std::stringstream stream, streamDirection, streamScore;
-	stream << "Pacman X: " << _pacman->position->X << " Y: " << _pacman->position->Y;
+	/*stream << "Pacman X: " << _pacman->position->X << " Y: " << _pacman->position->Y;
 	/*
 	streamDirection << "Direction X: " << _pacman->direction->X << " Y: " << _pacman->direction->Y//;
 	streamDirection << "LastMovement: " << GetMovementString(_pacman->lastMove) <<
 		<< "CurrentMovement: " << GetMovementString(_pacman->currMove) <<
 		" NextMovement: " << GetMovementString(_pacman->nextMove);
 	*/
+	stream << "Fruit Status - Hidden = " << _fruits->isShown <<
+		" Delay = " << _fruits->spawnDelay <<
+		" CountDown: " << _fruits->spawnTimer;
 	streamDirection << "Boost: " << _pacman->boostDuration << 
 		" Fear Timer: " << _ghostFearTimer <<
 		" Ghost[1]->motion = " << (int)_ghosts[0]->motion;
@@ -728,21 +732,24 @@ void Pacman::Input(int elapsedTime,
 		if (mouseState->RightButton == Input::ButtonState::PRESSED) {
 			//to be refactored into a function
 			if (!_fruits->isShown) {
-				Vector2i fTile = GetRandomTile('.');
-				_fruits->isShown = true;
-				_fruits->spawn = true;
-				_fruits->self.position = new Rect(
-					fTile.X * TILE_SIZE,
-					fTile.Y * TILE_SIZE,
-					TILE_SIZE, TILE_SIZE
-				);
-
-				//DEBUG
-				//cout << "FRUIT AT " << _fruits->self.position->X << ", " <<
-				//	_fruits->self.position->Y << endl;
+				SpawnFruit();
 			}
 		}
 	}
+}
+
+void Pacman::SpawnFruit() {
+	Vector2i fTile = GetRandomTile('.');
+	_fruits->isShown = true;
+	_fruits->self.position = new Rect(
+		fTile.X * TILE_SIZE,
+		fTile.Y * TILE_SIZE,
+		TILE_SIZE, TILE_SIZE
+	);
+
+	//DEBUG
+	//cout << "FRUIT AT " << _fruits->self.position->X << ", " <<
+	//	_fruits->self.position->Y << endl;
 }
 
 void UpdateBonuses(int elapsedTime) {
@@ -838,6 +845,7 @@ void Pacman::CheckPacmanCollision() {
 			}
 
 			//reset delay
+			_fruits->spawnTimer = 0;
 		}
 	}
 
@@ -852,8 +860,8 @@ void Pacman::CheckPacmanCollision() {
 					//reset ghost
 					Vector2 tmpGhostPos = Vector2();
 					tmpGhostPos = GetRandomTile('G').get();
-					_ghosts[i]->self.position->X = tmpGhostPos.X;
-					_ghosts[i]->self.position->Y = tmpGhostPos.Y;
+					_ghosts[i]->self.position->X = tmpGhostPos.X * TILE_SIZE;
+					_ghosts[i]->self.position->Y = tmpGhostPos.Y * TILE_SIZE;
 					_ghosts[i]->isAlive = true;
 					_ghosts[i]->isChasing = true;
 					_ghosts[i]->isEatable = false;
@@ -1214,13 +1222,15 @@ void Pacman::UpdatePacman(int elapsedTime){
 	*/
 	if ((tmpPos.X % TILE_SIZE < tmpSpeed) &&
 		(tmpPos.Y % TILE_SIZE < tmpSpeed)) {
+		
 		// test next direction?
 		if (_pacman->nextMove != Movement::mSTOP) {
 			// next tile is a space
 			if ((HasHitWall(tmpPos, _pacman->nextMove))) {
-
-				// set new direction
-				_pacman->currMove = _pacman->nextMove;
+				if (!GetMapTile(tmpPos.Y, tmpPos.X, '=')) {
+					// set new direction
+					_pacman->currMove = _pacman->nextMove;
+				}
 			}
 		}
 
@@ -1372,6 +1382,25 @@ void Pacman::UpdateBonuses(int elapsedTime) {
 	// Select version of fruit
 	_fruits->self.sourceRect->Y =
 		_fruits->self.sourceRect->Height * _fruits->curFrames;
+
+	// Auto spawn timer
+	if (_fruits->spawnTimer >= _fruits->spawnMaxTime) {
+		_fruits->spawnTimer = 0;
+	} else {
+		if (_frameCount % 20 == 0) {
+			_fruits->spawnTimer++;
+		}
+	}
+
+	if (_fruits->spawnTimer >= _fruits->spawnDelay) {
+		if (!_fruits->isShown) {
+			SpawnFruit();
+		} else {
+			_fruits->isShown = false;
+		}
+
+		_fruits->spawnTimer = 0;
+	}
 }
 
 void Pacman::UpdateGhost(int elapsedTime) {
@@ -1629,6 +1658,7 @@ void Pacman::ScareGhosts() {
 }
 
 void Pacman::UpdateMunchie(int elapsedTime){
+
 	// Draw Munchies (big and small)
 	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
 		// Animate munchie
