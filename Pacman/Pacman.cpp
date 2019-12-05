@@ -10,13 +10,14 @@ Pacman::Pacman(int argc, char* argv[]) :
 	Game(argc, argv), _cPacmanSpeed(0.1f), _cPacmanFrameTime(250)
 {
 	_frameCount = 0;
+	_pacmanStartPos = Vector2i(350, 350);
 
 	// initialise pacman/player
 	_pacman = new Player();
 	_pacman->currentFrametime = 0;
 	_pacman->frame = 0;
 	_pacman->texture = new Texture2D();
-	_pacman->position = new Vector2(350.0f, 350.0f);
+	_pacman->position = new Vector2(_pacmanStartPos.get());
 	_pacman->lives = 3;
 	_pacman->sourceRect = new Rect(0.0f, 0.0f, 32, 32);
 	_pacman->direction = new Vector2(0.0f, 0.0f);
@@ -91,9 +92,11 @@ Pacman::Pacman(int argc, char* argv[]) :
 	_start->_stringPosition = new Vector2(WWIDTH/ 2.3f,
 		(WHEIGHT/ 2.0f) + 100.0f);
 	_start->text = "_. - | Press SPACE BAR to start | -._";
+	_start->_playedSound = false;
 	
 	// music & soundeffects
 	_pop = new SoundEffect();
+	_intro = new SoundEffect();
 
 	//Initialise important Game aspects
 	Audio::Initialise();
@@ -241,7 +244,11 @@ void Pacman::LoadContent()
 	 */
 
 	// Load Music & Sounds
+	// eat a munchie
 	_pop->Load("Sounds/pop.wav");
+
+	// game intro
+	_intro->Load("Sounds/pacman_beginning.wav");
 
 	// Set string position
 	_stringPosition = new Vector2(10.0f, 25.0f);
@@ -334,6 +341,7 @@ void Pacman::InitialiseGhosts() {
 		_ghosts[i]->maxFrame = 2;
 		_ghosts[i]->isAlive = true;
 		_ghosts[i]->isChasing = true;
+		_ghosts[i]->isEatable = false;
 		_ghosts[i]->isSafe = true;
 		_ghosts[i]->speed = 0.1f;
 		_ghosts[i]->facing = Direction::dDOWN;
@@ -346,16 +354,23 @@ void Pacman::DefineMap() {
 	int _munchieCounter = 0;
 	int _wallCounter = 0;
 	int _ghostCounter = 0;
+	Vector2i tmpTile = Vector2i();
 
 	for (int row = 0; row < MAP_ROWS; row++) {
 		for (int col = 0; col < MAP_COLS; col++) {
 			switch (map[row][col]) {
 			case 'P':
+				//store start position
+				_pacmanStartPos = Vector2i(col * TILE_SIZE, row * TILE_SIZE);
+
 				//place pacman
+				_pacman->position = new Vector2(_pacmanStartPos.get());
+				/*
 				_pacman->position = new Vector2(
 					col * TILE_SIZE,
 					row * TILE_SIZE
 				);
+				*/
 				break;
 			case '+':
 			case '.':
@@ -431,15 +446,33 @@ void Pacman::DefineMap() {
 		}
 	}
 
+	//add additional ghosts, if any
+	//eg, NUM_OF_GHOSTS > 4
+	if (_ghostCounter < NUM_OF_GHOSTS) {
+		for (int i = _ghostCounter; i < NUM_OF_GHOSTS; i++) {
+			tmpTile = GetRandomTile('.');
+			_ghosts[_ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
+			_ghosts[_ghostCounter]->self.position = new Rect(
+				tmpTile.X * TILE_SIZE,
+				tmpTile.Y * TILE_SIZE,
+				TILE_SIZE, TILE_SIZE
+			);
+			_ghosts[_ghostCounter]->isAlive = true;
+			_ghosts[_ghostCounter]->isChasing = true;
+
+			_ghostCounter++;
+		}
+	}
+
 	//DEBUG
-	cout << "munchie number = " << _munchieCounter << endl;
-	cout << "_munchies[_munchieCounter]->rect;" <<
+	std::cout << "munchie number = " << _munchieCounter << endl;
+	std::cout << "_munchies[_munchieCounter]->rect;" <<
 		"\n     X: " << _munchies[_munchieCounter - 1]->self.position->X <<
 		"\n     Y: " << _munchies[_munchieCounter - 1]->self.position->Y <<
 		"\nHeight: " << _munchies[_munchieCounter - 1]->self.position->Height <<
 		"\n Width: " << _munchies[_munchieCounter - 1]->self.position->Width << endl << endl;
-	cout << "wall number = " << _wallCounter << endl;
-	cout << "_walls[_wallCounter]->rect;" <<
+	std::cout << "wall number = " << _wallCounter << endl;
+	std::cout << "_walls[_wallCounter]->rect;" <<
 		"\n     X: " << _walls[_wallCounter - 1]->self.position->X <<
 		"\n     Y: " << _walls[_wallCounter - 1]->self.position->Y <<
 		"\nHeight: " << _walls[_wallCounter - 1]->self.position->Height <<
@@ -461,6 +494,11 @@ void Pacman::Update(int elapsedTime) {
 	Input::KeyboardState* keyboardState = Input::Keyboard::GetState();
 	Input::MouseState* mouseState = Input::Mouse::GetState();
 	CheckPaused(keyboardState, Input::Keys::P, Input::Keys::SPACE);
+
+	if (!_start->_playedSound) {
+		Audio::Play(_intro);
+		_start->_playedSound = true;
+	}
 
 	if (!_pause->_menu || !_start->_menu) {
 		Input(elapsedTime, keyboardState, mouseState);
@@ -508,7 +546,9 @@ void Pacman::Draw(int elapsedTime) {
 	SpriteBatch::BeginDraw(); // Starts Drawing
 
 	// Draws Pacman
-	SpriteBatch::Draw(_pacman->texture, _pacman->position, _pacman->sourceRect); 
+	if (_pacman->lives >= 0) {
+		SpriteBatch::Draw(_pacman->texture, _pacman->position, _pacman->sourceRect);
+	}
 
 	// Draws Munchies
 	for (int i = 0; i < NUM_OF_MUNCHIES - 1; i++) {
@@ -719,10 +759,14 @@ void Pacman::CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey, Inpu
 	}
 
 	// Checks is StartGame key is pressed (Start Screen)
-	if (state->IsKeyDown(startKey)) {
+	if ((state->IsKeyDown(startKey))) {
 		if (_start->_menu && _pause->_menu) {
 			_start->_menu = false;
 			_pause->_menu = false;
+			if ((_intro->GetState() == SoundEffectState::PLAYING)) {
+				_intro->SetLooping(false);
+			}
+
 		}
 	}
 
@@ -794,6 +838,45 @@ void Pacman::CheckPacmanCollision() {
 			}
 
 			//reset delay
+		}
+	}
+
+	if (NUM_OF_GHOSTS > 0) {
+		for (int i = 0; i < NUM_OF_GHOSTS; i++) {
+			if (HasTargetHitObject(&tmpRect, _ghosts[i]->self.position, 0, 'B')) {
+				if (_ghosts[i]->isEatable) {
+					//eat ghost
+					//score
+					_pacman->score += _ghosts[i]->value;
+
+					//reset ghost
+					Vector2 tmpGhostPos = Vector2();
+					tmpGhostPos = GetRandomTile('G').get();
+					_ghosts[i]->self.position->X = tmpGhostPos.X;
+					_ghosts[i]->self.position->Y = tmpGhostPos.Y;
+					_ghosts[i]->isAlive = true;
+					_ghosts[i]->isChasing = true;
+					_ghosts[i]->isEatable = false;
+					_ghosts[i]->isSafe = true;
+					_ghosts[i]->facing = Direction::dDOWN;
+					_ghosts[i]->motion = Movement::mSTOP;
+					_ghosts[i]->nextMove = Movement::mSTOP;
+
+				} else {
+					//stop movement
+					_pacman->nextMove = Movement::mSTOP;
+					_pacman->currMove = Movement::mSTOP;
+
+					//death animation trigger
+
+					//decreament lives
+					_pacman->lives--;
+
+					//place pacman
+					_pacman->position = new Vector2(_pacmanStartPos.get());
+				}
+			}
+
 		}
 	}
 }
@@ -1033,6 +1116,31 @@ void Pacman::CheckViewportCollision(){
 
 	if (_pacman->position->X > WWIDTH - _pacman->sourceRect->Width) {
 		_pacman->position->X = 1.0f;
+	}
+
+	CheckWarpCollision(_pacman->position->X, _pacman->position->Y);
+}
+
+void Pacman::CheckWarpCollision(float& posX, float& posY) {
+	Vector2i tmpTile;
+	tmpTile.X = floor(posX / TILE_SIZE);
+	tmpTile.Y = floor(posY / TILE_SIZE);
+
+	switch (IdentifyTile(tmpTile.Y, tmpTile.X)) {
+	case '<':
+		tmpTile = GetRandomTile('>');
+
+		posX = (tmpTile.X - 1) * TILE_SIZE;
+		posY = tmpTile.Y * TILE_SIZE;
+		break;
+	case '>':
+		tmpTile = GetRandomTile('<');
+
+		posX = (tmpTile.X + 1) * TILE_SIZE;
+		posY = tmpTile.Y * TILE_SIZE;
+		break;
+	default:
+		break;
 	}
 }
 
@@ -1311,6 +1419,7 @@ void Pacman::UpdateGhost(int elapsedTime) {
 				if (!HasHitWall(tmpVect, _ghosts[i]->motion)) {
 					_ghosts[i]->motion = NotSoRandomMotion(tmpVect);
 				} else {
+					CheckWarpCollision(_ghosts[i]->self.position->X, _ghosts[i]->self.position->Y);
 				}
 			} else {
 				// if stopped
@@ -1410,6 +1519,7 @@ void Pacman::UpdateGhost(int elapsedTime) {
 		}
 		else {
 			_ghosts[i]->isChasing = true;
+			_ghosts[i]->isEatable = false;
 		}
 	}
 }
@@ -1470,8 +1580,18 @@ Movement Pacman::NotSoRandomMotion(Vector2i pos) {
 	return result;
 }
 
+
+/* this would be a duplicate of GetRandomTile() function
+Vector2i Pacman::FindTile(char target) {
+
+}*/
+
 bool Pacman::GetMapTile(int row, int col, char tile) {
 	return map[row][col] == tile ? true : false;
+}
+
+char Pacman::IdentifyTile(int row, int col) {
+	return map[row][col];
 }
 
 Vector2i Pacman::GetRandomTile(char tile) {
@@ -1492,7 +1612,7 @@ Vector2i Pacman::GetRandomTile(char tile) {
 		}
 	}
 
-	return tmpArray[rand() % counter + 1];
+	return tmpArray[rand() % counter];
 
 	//return Vector2i();
 }
@@ -1503,6 +1623,7 @@ void Pacman::ScareGhosts() {
 
 		for (int i = 0; i < NUM_OF_GHOSTS; i++) {
 			_ghosts[i]->isChasing = false;
+			_ghosts[i]->isEatable = true;
 		}
 	}
 }

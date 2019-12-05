@@ -26,6 +26,19 @@ using namespace S2D;
 struct Vector2i {
 	int X = 0;
 	int Y = 0;
+
+	Vector2i(int newX = 0, int newY = 0) {
+		X = newX;
+		Y = newY;
+	}
+
+	Vector2 get() {
+		Vector2 tmp;
+		tmp.X = X;
+		tmp.Y = Y;
+
+		return tmp;
+	}
 };
 
 enum class Movement : unsigned int {
@@ -124,8 +137,10 @@ struct Enemy {
 	int currFrame;
 	int maxFrame;
 	bool isChasing;
+	bool isEatable;
 	bool isAlive;
 	bool isSafe;
+	int value;
 
 	Direction facing;
 	Movement motion;
@@ -141,6 +156,7 @@ struct Menu {
 	string text;
 	bool _menu;	// better name to describe action
 	bool _keyDown;
+	bool _playedSound;
 };
 
 // Declares the Pacman class which inherits from the Game class.
@@ -155,6 +171,7 @@ private:
 	Player* _pacman;
 	int _pacmanFrame;
 	int _pacmanCurrentFrameTime;
+	Vector2i _pacmanStartPos;
 
 	int _frameCount;
 	int _time = 0;
@@ -166,6 +183,7 @@ private:
 	bool _mainMenu;
 
 	SoundEffect* _pop;
+	SoundEffect* _intro;
 	
 
 	//data to represent munchies
@@ -212,6 +230,8 @@ private:
 
 	void CheckViewportCollision(float& X, float& Y, int& Width, int& Height);
 
+	void CheckWarpCollision(float& posX, float& posY);
+
 	void DeleteEntity(Entity* obj);
 
 	void DeleteMenu(Menu* obj);
@@ -239,6 +259,8 @@ private:
 	bool HasHitWall(Vector2i origin, Movement moveTo);
 
 	bool HasTargetHitObject(Rect* git, Rect* obj, float tolerance = 0, char mode = 'c');
+	
+	char IdentifyTile(int row, int col);
 
 	void Input(int elapsedTime, Input::KeyboardState* state, Input::MouseState* mouseState);
 
