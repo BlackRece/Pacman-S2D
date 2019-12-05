@@ -833,7 +833,12 @@ void Pacman::CheckPacmanCollision() {
 			_fruits->isShown = false;
 
 			//update score
-			_pacman->score += _fruits->value * _fruits->num;
+			_pacman->score += _fruits->value * (_fruits->num + 1);
+			/*
+			Note:
+			  since "num" starts at zero, need to increment to ensure
+			  that the fruit value is multiplied by a non-zero number
+			*/
 
 			//play sound fx
 
