@@ -189,8 +189,10 @@ private:
 	
 
 	//data to represent munchies
-	Munchie* _munchies[NUM_OF_MUNCHIES] = { nullptr };
+	//Munchie* _munchies[NUM_OF_MUNCHIES] = { nullptr };
+	Munchie* _munchies;
 	Texture2D* _munchieTexture;
+	int _munchieCount;
 
 	// data to represent collectables
 	Bonus* _fruits;
@@ -201,9 +203,10 @@ private:
 
 	//data to represent border
 	const static int NUM_OF_WALLS = MAX_ELEMENTS - NUM_OF_MUNCHIES;
-	Obstacle* _walls[NUM_OF_WALLS] = { nullptr };
+	Obstacle* _walls;
 	Texture2D* _wallTexture;
 	int _wallScale;
+	int _wallCount;
 
 	//data to represent ghosts
 	Enemy* _ghosts[NUM_OF_GHOSTS];
@@ -219,8 +222,6 @@ private:
 	int score = 0;
 
 	Vector2 ApplyMovement(Movement direction, float velocity);
-
-
 
 	void CheckPacmanCollision();
 

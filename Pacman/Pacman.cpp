@@ -35,10 +35,12 @@ Pacman::Pacman(int argc, char* argv[]) :
 	// initialise walls
 	_wallTexture = new Texture2D();
 	_wallScale = 1.0f;
+	_wallCount = 0;
 	
 	// Collectables
 	// initialise munchies
 	_munchieTexture = new Texture2D();
+	_munchieCount = 0;
 	
 	// initialise fruits
 	_fruitTexture = new Texture2D();
@@ -114,14 +116,14 @@ Pacman::~Pacman()
 	DeletePlayer(_pacman);
 	delete _pacman;
 
-	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
-		DeleteMunchie(_munchies[i]);
+	for (int i = 0; i < _munchieCount; i++) {
+		DeleteEntity(&_munchies[i].self);
 	}
 	delete _munchies;
 	delete _munchieTexture;
 	
-	for (int i = 0; i < NUM_OF_WALLS; i++) {
-		DeleteObstacle(_walls[i]);
+	for (int i = 0; i < _wallCount; i++) {
+		DeleteEntity(&_walls[i].self);
 	}
 	delete _walls;
 	delete _wallTexture;
@@ -191,19 +193,25 @@ void Pacman::LoadContent()
 
 	// Load Munchies
 	_munchieTexture->Load("Textures/Munchie.png", true);
-	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
-		_munchies[i]->self.texture = _munchieTexture;
+	for (int i = 0; i < _munchieCount; i++) {
+		_munchies[i].self.texture = _munchieTexture;
 	}
 	
 	// Load Walls
 	_wallTexture->Load("Textures/wallTile.tga", true);
-	for (int i = 0; i < NUM_OF_WALLS; i++) {
-		_walls[i]->self.texture = _wallTexture;
+	for (int i = 0; i < _wallCount; i++) {
+		_walls[i].self.texture = _wallTexture;
 	}
 
 	// Load Ghosts
 	int ghostID = 0;
 	for (int i = 0; i < NUM_OF_GHOSTS; i++) {
+		//randomise ghosts after the first 4
+		if (i > 3) {
+			ghostID = rand() % 4;
+		}
+
+		//allocate texture of ghost
 		switch (ghostID) {
 		case 0:
 			_ghosts[i]->self.texture->Load("Textures/Ghosts_Red.png", true);
@@ -221,6 +229,7 @@ void Pacman::LoadContent()
 			break;
 		}
 		
+		//choose next ghost texture
 		if (ghostID < 3) {
 			ghostID++;
 		} else {
@@ -265,6 +274,8 @@ void Pacman::LoadMap() {
 
 	string rawRow = "";
 	int rowCount = 0;
+	int wallCount = 0;
+	int munchieCount = 0;
 
 	if (mapFile.is_open()) {
 		while (getline(mapFile, rawRow, '\n')) {
@@ -282,7 +293,21 @@ void Pacman::LoadMap() {
 						" (" << rawRow.length() << ")" << endl;
 				}
 				if (rawRow.length() > i) {
+					//store element to map array
 					map[rowCount][i] = (char)rawRow.at(i);
+
+					//count map elements
+					switch (map[rowCount][i]) {
+					case '#':
+						_wallCount++;
+						break;
+					case '+':
+					case '.':
+						_munchieCount++;
+						break;
+					default:
+						break;
+					}
 				}
 			}
 
@@ -299,35 +324,38 @@ void Pacman::LoadMap() {
 }
 
 void Pacman::InitialiseMunchies() {
-	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
+	if (_munchieCount < 1) _munchieCount = NUM_OF_MUNCHIES;
+	_munchies = new Munchie[_munchieCount];
+	for (int i = 0; i < _munchieCount; i++) {
 		//all munchies
-		_munchies[i] = new Munchie();
-		_munchies[i]->self = Entity();
-		_munchies[i]->self.sourceRect = new Rect();
-		_munchies[i]->self.position = new Rect();
-		_munchies[i]->self.texture = new Texture2D();
-		_munchies[i]->self.texture = _munchieTexture;
-		_munchies[i]->isEaten = false;
-		_munchies[i]->isPowerPellet = false;
-		_munchies[i]->value = 0;
-		_munchies[i]->scale = 0;
-		_munchies[i]->offset = 0;
+		//_munchies[i] = new Munchie();
+		_munchies[i].self = Entity();
+		_munchies[i].self.sourceRect = new Rect();
+		_munchies[i].self.position = new Rect();
+		_munchies[i].self.texture = new Texture2D();
+		_munchies[i].self.texture = _munchieTexture;
+		_munchies[i].isEaten = false;
+		_munchies[i].isPowerPellet = false;
+		_munchies[i].value = 0;
+		_munchies[i].scale = 0;
+		_munchies[i].offset = 0;
 	}
 }
 
 void Pacman::InitialiseWalls() {
-	for (int i = 0; i < NUM_OF_WALLS; i++) {
-		_walls[i] = new Obstacle();
-		_walls[i]->self = Entity();
-		_walls[i]->self.position = new Rect();
-		_walls[i]->self.sourceRect = new Rect();
-		_walls[i]->self.texture = new Texture2D();
-		_walls[i]->self.texture = _wallTexture;
-		_walls[i]->canBonusSpawn = false;
-		_walls[i]->canGhostsPass = false;
-		_walls[i]->canGhostsSpawn = false;
-		_walls[i]->canPlayerPass = false;
-		_walls[i]->canPlayerSpawn = false;
+	if (_wallCount < 1) _wallCount = NUM_OF_WALLS;
+	_walls = new Obstacle[_wallCount];
+	for (int i = 0; i < _wallCount; i++) {
+		_walls[i].self = Entity();
+		_walls[i].self.position = new Rect();
+		_walls[i].self.sourceRect = new Rect();
+		_walls[i].self.texture = new Texture2D();
+		_walls[i].self.texture = _wallTexture;
+		_walls[i].canBonusSpawn = false;
+		_walls[i].canGhostsPass = false;
+		_walls[i].canGhostsSpawn = false;
+		_walls[i].canPlayerPass = false;
+		_walls[i].canPlayerSpawn = false;
 	}
 }
 
@@ -353,9 +381,9 @@ void Pacman::InitialiseGhosts() {
 }
 
 void Pacman::DefineMap() {
-	int _munchieCounter = 0;
-	int _wallCounter = 0;
-	int _ghostCounter = 0;
+	int munchieCounter = 0;
+	int wallCounter = 0;
+	int ghostCounter = 0;
 	Vector2i tmpTile = Vector2i();
 
 	for (int row = 0; row < MAP_ROWS; row++) {
@@ -377,62 +405,62 @@ void Pacman::DefineMap() {
 			case '+':
 			case '.':
 				//all munchies
-				_munchies[_munchieCounter]->self.sourceRect = new Rect(0.0f, 0.0f, MUNCHIE_SIZE, MUNCHIE_SIZE);
-				_munchies[_munchieCounter]->self.position = new Rect(
+				_munchies[munchieCounter].self.sourceRect = new Rect(0.0f, 0.0f, MUNCHIE_SIZE, MUNCHIE_SIZE);
+				_munchies[munchieCounter].self.position = new Rect(
 					(col)*TILE_SIZE,
 					(row)*TILE_SIZE,
 					MUNCHIE_SIZE, MUNCHIE_SIZE
 				);
 
-				_munchies[_munchieCounter]->isEaten = false;
+				_munchies[munchieCounter].isEaten = false;
 
 				//power munchies
 				if (map[row][col] == '+') {
-					_munchies[_munchieCounter]->isPowerPellet = true;
-					_munchies[_munchieCounter]->value = 50;
-					_munchies[_munchieCounter]->scale = 2.0f;
-					_munchies[_munchieCounter]->offset = (TILE_SIZE / 2) / _munchies[_munchieCounter]->scale;
+					_munchies[munchieCounter].isPowerPellet = true;
+					_munchies[munchieCounter].value = 50;
+					_munchies[munchieCounter].scale = 2.0f;
+					_munchies[munchieCounter].offset = (TILE_SIZE / 2) / _munchies[munchieCounter].scale;
 
 				} else {
-					_munchies[_munchieCounter]->isPowerPellet = false;
-					_munchies[_munchieCounter]->value = 10;
-					_munchies[_munchieCounter]->scale = 1.0f;
-					_munchies[_munchieCounter]->offset = TILE_SIZE / 2;
+					_munchies[munchieCounter].isPowerPellet = false;
+					_munchies[munchieCounter].value = 10;
+					_munchies[munchieCounter].scale = 1.0f;
+					_munchies[munchieCounter].offset = TILE_SIZE / 2;
 				}
 
 				//center munchie
-				_munchies[_munchieCounter]->self.position->X +=
-					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->self.position->Width / 2;
-				_munchies[_munchieCounter]->self.position->Y +=
-					_munchies[_munchieCounter]->offset - _munchies[_munchieCounter]->self.position->Height / 2;
+				_munchies[munchieCounter].self.position->X +=
+					_munchies[munchieCounter].offset - _munchies[munchieCounter].self.position->Width / 2;
+				_munchies[munchieCounter].self.position->Y +=
+					_munchies[munchieCounter].offset - _munchies[munchieCounter].self.position->Height / 2;
 
-				_munchieCounter++;
+				munchieCounter++;
 				break;
 			case '#':
-				_walls[_wallCounter]->self.sourceRect = new Rect(0.0f, 0.0f, TILE_SIZE, TILE_SIZE);
-				_walls[_wallCounter]->self.position = new Rect(
+				_walls[wallCounter].self.sourceRect = new Rect(0.0f, 0.0f, TILE_SIZE, TILE_SIZE);
+				_walls[wallCounter].self.position = new Rect(
 					(col)*TILE_SIZE,
 					(row)*TILE_SIZE,
 					TILE_SIZE, TILE_SIZE
 				);
-				_walls[_wallCounter]->canGhostsPass = false;
-				_walls[_wallCounter]->canGhostsSpawn = false;
-				_walls[_wallCounter]->canPlayerPass = false;
-				_walls[_wallCounter]->canPlayerSpawn = false;
-				_walls[_wallCounter]->canBonusSpawn = false;
+				_walls[wallCounter].canGhostsPass = false;
+				_walls[wallCounter].canGhostsSpawn = false;
+				_walls[wallCounter].canPlayerPass = false;
+				_walls[wallCounter].canPlayerSpawn = false;
+				_walls[wallCounter].canBonusSpawn = false;
 
-				_wallCounter++;
+				wallCounter++;
 				break;
 			case 'G':
-				if (_ghostCounter < NUM_OF_GHOSTS) {
-					_ghosts[_ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
-					_ghosts[_ghostCounter]->self.position = new Rect(
+				if (ghostCounter < NUM_OF_GHOSTS) {
+					_ghosts[ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
+					_ghosts[ghostCounter]->self.position = new Rect(
 						col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
 					);
-					_ghosts[_ghostCounter]->isAlive = true;
-					_ghosts[_ghostCounter]->isChasing = true;
+					_ghosts[ghostCounter]->isAlive = true;
+					_ghosts[ghostCounter]->isChasing = true;
 
-					_ghostCounter++;
+					ghostCounter++;
 				}
 				break;
 			case 'B':
@@ -449,35 +477,35 @@ void Pacman::DefineMap() {
 
 	//add additional ghosts, if any
 	//eg, NUM_OF_GHOSTS > 4
-	if (_ghostCounter < NUM_OF_GHOSTS) {
-		for (int i = _ghostCounter; i < NUM_OF_GHOSTS; i++) {
+	if (ghostCounter < NUM_OF_GHOSTS) {
+		for (int i = ghostCounter; i < NUM_OF_GHOSTS; i++) {
 			tmpTile = GetRandomTile('.');
-			_ghosts[_ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
-			_ghosts[_ghostCounter]->self.position = new Rect(
+			_ghosts[ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
+			_ghosts[ghostCounter]->self.position = new Rect(
 				tmpTile.X * TILE_SIZE,
 				tmpTile.Y * TILE_SIZE,
 				TILE_SIZE, TILE_SIZE
 			);
-			_ghosts[_ghostCounter]->isAlive = true;
-			_ghosts[_ghostCounter]->isChasing = true;
+			_ghosts[ghostCounter]->isAlive = true;
+			_ghosts[ghostCounter]->isChasing = true;
 
-			_ghostCounter++;
+			ghostCounter++;
 		}
 	}
 
 	//DEBUG
-	std::cout << "munchie number = " << _munchieCounter << endl;
-	std::cout << "_munchies[_munchieCounter]->rect;" <<
-		"\n     X: " << _munchies[_munchieCounter - 1]->self.position->X <<
-		"\n     Y: " << _munchies[_munchieCounter - 1]->self.position->Y <<
-		"\nHeight: " << _munchies[_munchieCounter - 1]->self.position->Height <<
-		"\n Width: " << _munchies[_munchieCounter - 1]->self.position->Width << endl << endl;
-	std::cout << "wall number = " << _wallCounter << endl;
-	std::cout << "_walls[_wallCounter]->rect;" <<
-		"\n     X: " << _walls[_wallCounter - 1]->self.position->X <<
-		"\n     Y: " << _walls[_wallCounter - 1]->self.position->Y <<
-		"\nHeight: " << _walls[_wallCounter - 1]->self.position->Height <<
-		"\n Width: " << _walls[_wallCounter - 1]->self.position->Width << endl;
+	std::cout << "munchie number = " << munchieCounter << endl;
+	std::cout << "_munchies[munchieCounter]->rect;" <<
+		"\n     X: " << _munchies[munchieCounter - 1].self.position->X <<
+		"\n     Y: " << _munchies[munchieCounter - 1].self.position->Y <<
+		"\nHeight: " << _munchies[munchieCounter - 1].self.position->Height <<
+		"\n Width: " << _munchies[munchieCounter - 1].self.position->Width << endl << endl;
+	std::cout << "wall number = " << wallCounter << endl;
+	std::cout << "_walls[wallCounter]->rect;" <<
+		"\n     X: " << _walls[wallCounter - 1].self.position->X <<
+		"\n     Y: " << _walls[wallCounter - 1].self.position->Y <<
+		"\nHeight: " << _walls[wallCounter - 1].self.position->Height <<
+		"\n Width: " << _walls[wallCounter - 1].self.position->Width << endl;
 
 }
 
@@ -555,24 +583,24 @@ void Pacman::Draw(int elapsedTime) {
 	}
 
 	// Draws Munchies
-	for (int i = 0; i < NUM_OF_MUNCHIES - 1; i++) {
-		if (!_munchies[i]->isEaten) {
+	for (int i = 0; i < _munchieCount - 1; i++) {
+		if (!_munchies[i].isEaten) {
 			SpriteBatch::Draw(
-				_munchies[i]->self.texture,
-				_munchies[i]->self.position,
-				_munchies[i]->self.sourceRect,
+				_munchies[i].self.texture,
+				_munchies[i].self.position,
+				_munchies[i].self.sourceRect,
 				Vector2::Zero,
-				_munchies[i]->scale,
+				_munchies[i].scale,
 				0.0f, Color::White, SpriteEffect::NONE);
 		}
 	}
 
 	// Draw Walls
-	for (int i = 0; i < NUM_OF_WALLS; i++) {
+	for (int i = 0; i < _wallCount; i++) {
 		SpriteBatch::Draw(
-			_walls[i]->self.texture,
-			_walls[i]->self.position,
-			_walls[i]->self.sourceRect,
+			_walls[i].self.texture,
+			_walls[i].self.position,
+			_walls[i].self.sourceRect,
 			Vector2::Zero,
 			_wallScale,
 			0.0f, Color::White, SpriteEffect::NONE);
@@ -802,21 +830,21 @@ void Pacman::CheckPacmanCollision() {
 	//check collision with munchies
 	int _munchieCounter = 0;
 
-	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
-		if (!_munchies[i]->isEaten) {
+	for (int i = 0; i < _munchieCount; i++) {
+		if (!_munchies[i].isEaten) {
 			//test munchie position
-			if (HasTargetHitObject(&tmpRect, _munchies[i]->self.position, 0)) {
+			if (HasTargetHitObject(&tmpRect, _munchies[i].self.position, 0)) {
 				//set flag
-				_munchies[i]->isEaten = true;
+				_munchies[i].isEaten = true;
 
 				//update score
-				_pacman->score += _munchies[i]->value;
+				_pacman->score += _munchies[i].value;
 
 				//play soundfx
 				Audio::Play(_pop);
 
 				//scare ghosts!
-				if (_munchies[i]->isPowerPellet) {
+				if (_munchies[i].isPowerPellet) {
 					ScareGhosts();
 				}
 				
@@ -903,14 +931,14 @@ bool Pacman::HasHitWall(Rect* target, bool isPlayer = true,
 	Rect wall;
 	float slim = wallTolerance;	//reduction in wall boundary
 	
-	for (int i = 0; i < NUM_OF_WALLS; i++) {
+	for (int i = 0; i < _wallCount; i++) {
 		if (isPlayer) {
-			passThroughable = _walls[i]->canPlayerPass;
+			passThroughable = _walls[i].canPlayerPass;
 		} else {
-			passThroughable = _walls[i]->canGhostsPass;
+			passThroughable = _walls[i].canGhostsPass;
 		}
 		if (!passThroughable) {
-			wall = *_walls[i]->self.position;
+			wall = *_walls[i].self.position;
 			wall.Width -= slim;
 			wall.Height -= slim;
 			wall.X += slim / 2;
@@ -1665,14 +1693,14 @@ void Pacman::ScareGhosts() {
 void Pacman::UpdateMunchie(int elapsedTime){
 
 	// Draw Munchies (big and small)
-	for (int i = 0; i < NUM_OF_MUNCHIES; i++) {
+	for (int i = 0; i < _munchieCount; i++) {
 		// Animate munchie
 		if (_frameCount < 30) {
 			// Select Red Munchie
-			_munchies[i]->self.sourceRect->X = _munchies[i]->self.sourceRect->Width;
+			_munchies[i].self.sourceRect->X = _munchies[i].self.sourceRect->Width;
 		} else {
 			// Select Blue Munchie
-			_munchies[i]->self.sourceRect->X = 0.0f;
+			_munchies[i].self.sourceRect->X = 0.0f;
 		}
 	}
 }
