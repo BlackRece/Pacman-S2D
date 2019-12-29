@@ -683,7 +683,7 @@ void Pacman::Draw(int elapsedTime) {
 		SpriteBatch::DrawRectangle(_pause->_textRect, Color::Red);
 		SpriteBatch::DrawString(menuStream.str().c_str(), _pause->_stringPosition, Color::Green);
 	} else {
-		// enable munchie animations
+		// enable animations
 		_frameCount++;
 
 		// Draws String
