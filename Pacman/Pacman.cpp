@@ -317,6 +317,8 @@ void Pacman::LoadMap() {
 		}
 	}
 
+	mapFile.close();
+
 	InitialiseMunchies();
 	InitialiseWalls();
 	InitialiseGhosts();
@@ -479,7 +481,7 @@ void Pacman::DefineMap() {
 	//eg, NUM_OF_GHOSTS > 4
 	if (ghostCounter < NUM_OF_GHOSTS) {
 		for (int i = ghostCounter; i < NUM_OF_GHOSTS; i++) {
-			tmpTile = GetRandomTile('.');
+			tmpTile = GetRandomTilePos('.');
 			_ghosts[ghostCounter]->self.sourceRect = new Rect(0, 0, TILE_SIZE, TILE_SIZE);
 			_ghosts[ghostCounter]->self.position = new Rect(
 				tmpTile.X * TILE_SIZE,
@@ -552,8 +554,6 @@ void Pacman::Draw(int elapsedTime) {
 	/* TODO:
 	 * =====
 	 * 
-	 * - Draw Ghosts/Enemies
-	 * - Re Draw existing Munchies
 	 * - Draw PowerUps/Pickups
 	 *
 	 */
@@ -767,7 +767,7 @@ void Pacman::Input(int elapsedTime,
 }
 
 void Pacman::SpawnFruit() {
-	Vector2i fTile = GetRandomTile('.');
+	Vector2i fTile = GetRandomTilePos('.');
 	_fruits->isShown = true;
 	_fruits->self.position = new Rect(
 		fTile.X * TILE_SIZE,
@@ -892,7 +892,7 @@ void Pacman::CheckPacmanCollision() {
 
 					//reset ghost
 					Vector2 tmpGhostPos = Vector2();
-					tmpGhostPos = GetRandomTile('G').get();
+					tmpGhostPos = GetRandomTilePos('G').get();
 					_ghosts[i]->self.position->X = tmpGhostPos.X * TILE_SIZE;
 					_ghosts[i]->self.position->Y = tmpGhostPos.Y * TILE_SIZE;
 					_ghosts[i]->isAlive = true;
@@ -1167,15 +1167,15 @@ void Pacman::CheckWarpCollision(float& posX, float& posY) {
 	tmpTile.X = floor(posX / TILE_SIZE);
 	tmpTile.Y = floor(posY / TILE_SIZE);
 
-	switch (IdentifyTile(tmpTile.Y, tmpTile.X)) {
+	switch (GetMapTile(tmpTile.Y, tmpTile.X)) {
 	case '<':
-		tmpTile = GetRandomTile('>');
+		tmpTile = GetRandomTilePos('>');
 
 		posX = (tmpTile.X - 1) * TILE_SIZE;
 		posY = tmpTile.Y * TILE_SIZE;
 		break;
 	case '>':
-		tmpTile = GetRandomTile('<');
+		tmpTile = GetRandomTilePos('<');
 
 		posX = (tmpTile.X + 1) * TILE_SIZE;
 		posY = tmpTile.Y * TILE_SIZE;
@@ -1260,7 +1260,7 @@ void Pacman::UpdatePacman(int elapsedTime){
 		if (_pacman->nextMove != Movement::mSTOP) {
 			// next tile is a space
 			if ((HasHitWall(tmpPos, _pacman->nextMove))) {
-				if (!GetMapTile(tmpPos.Y, tmpPos.X, '=')) {
+				if (!IsMapTile(tmpPos.Y, tmpPos.X, '=')) {
 					// set new direction
 					_pacman->currMove = _pacman->nextMove;
 				}
@@ -1327,7 +1327,6 @@ Direction Pacman::IsFacing(Movement movement) {
 		break;
 	}
 }
-
 
 //too ridgid
 Movement Pacman::GetMapMovement(Vector2i tile) {
@@ -1494,7 +1493,7 @@ void Pacman::UpdateGhost(int elapsedTime) {
 			}
 
 			// Move ghosts out of base
-			if (GetMapTile(
+			if (IsMapTile(
 				floor(tmpVect.Y / TILE_SIZE),
 				floor(tmpVect.X / TILE_SIZE),
 				'^')) {
@@ -1503,7 +1502,7 @@ void Pacman::UpdateGhost(int elapsedTime) {
 		} else {
 			//DEBUG
 			// keep ghost off of walls due to frame skips
-			if (GetMapTile(
+			if (IsMapTile(
 				floor(tmpVect.Y / TILE_SIZE),
 				floor(tmpVect.X / TILE_SIZE),
 				'#')) {
@@ -1615,10 +1614,10 @@ Movement Pacman::NotSoRandomMotion(Vector2i pos) {
 	int col = floor(pos.X / TILE_SIZE);
 
 	// fill array with available movements
-	moves[0] = GetMapTile(row, col - 1, '#') ? Movement::mSTOP : Movement::mLEFT;
-	moves[1] = GetMapTile(row, col + 1, '#') ? Movement::mSTOP : Movement::mRIGHT;
-	moves[2] = GetMapTile(row - 1, col, '#') ? Movement::mSTOP : Movement::mUP;
-	moves[3] = GetMapTile(row + 1, col, '#') ? Movement::mSTOP : Movement::mDOWN;
+	moves[0] = IsMapTile(row, col - 1, '#') ? Movement::mSTOP : Movement::mLEFT;
+	moves[1] = IsMapTile(row, col + 1, '#') ? Movement::mSTOP : Movement::mRIGHT;
+	moves[2] = IsMapTile(row - 1, col, '#') ? Movement::mSTOP : Movement::mUP;
+	moves[3] = IsMapTile(row + 1, col, '#') ? Movement::mSTOP : Movement::mDOWN;
 
 	// count available movements
 	for (int i = 0; i < 4; i++) {
@@ -1648,15 +1647,15 @@ Vector2i Pacman::FindTile(char target) {
 
 }*/
 
-bool Pacman::GetMapTile(int row, int col, char tile) {
+bool Pacman::IsMapTile(int row, int col, char tile) {
 	return map[row][col] == tile ? true : false;
 }
 
-char Pacman::IdentifyTile(int row, int col) {
+char Pacman::GetMapTile(int row, int col) {
 	return map[row][col];
 }
 
-Vector2i Pacman::GetRandomTile(char tile) {
+Vector2i Pacman::GetRandomTilePos(char tile) {
 	int counter = 0;
 	vector<Vector2i> tmpArray(0);
 	Vector2i tmpVect = Vector2i();

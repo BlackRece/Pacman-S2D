@@ -1,13 +1,14 @@
 #define TILE_SIZE 32
-#define MAX_ELEMENTS 644
+#define MAX_FRAMES 60
 #define WWIDTH 1028
 #define WHEIGHT 768
-#define NUM_OF_MUNCHIES 210
-#define MUNCHIE_SIZE 16
+#define MAX_ELEMENTS 644
 #define MAP_ROWS 23
 #define MAP_COLS 27
 #define NUM_OF_GHOSTS 8
 #define NUM_OF_FRUITS 8
+#define NUM_OF_MUNCHIES 210
+#define MUNCHIE_SIZE 16
 
 // If Windows and not in Debug, this will run without a console window
 // You can use this to output information when debugging using cout or cerr
@@ -19,10 +20,12 @@
 
 // Just need to include main header file
 #include "S2D/S2D.h"
+#include "Vector2i.h"
 
 // Reduces the amount of typing by including all classes in S2D namespace
 using namespace S2D;
 
+/*
 struct Vector2i {
 	int X = 0;
 	int Y = 0;
@@ -40,6 +43,7 @@ struct Vector2i {
 		return tmp;
 	}
 };
+*/
 
 enum class Movement : unsigned int {
 	mLEFT = 0,
@@ -251,11 +255,9 @@ private:
 	
 	Movement GetMapMovement(Vector2i tile);
 	
-	bool GetMapTile(int row, int col, char tile);
+	Vector2i GetRandomTilePos(char tile);
 
 	std::string GetMovementString(Movement movement);
-
-	Vector2i GetRandomTile(char tile);
 
 	bool HasHitWall(Rect* target, bool isPlayer, float targetTolerance = 0, float wallTolerance = 0);
 
@@ -263,11 +265,13 @@ private:
 
 	bool HasTargetHitObject(Rect* git, Rect* obj, float tolerance = 0, char mode = 'c');
 	
-	char IdentifyTile(int row, int col);
+	char GetMapTile(int row, int col);
 
 	void Input(int elapsedTime, Input::KeyboardState* state, Input::MouseState* mouseState);
 
 	Direction IsFacing(Movement movement);
+
+	bool IsMapTile(int row, int col, char tile);
 
 	Movement NotSoRandomMotion(Vector2i pos);
 

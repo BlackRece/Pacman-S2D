@@ -84,11 +84,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Bonus.cpp" />
+    <ClCompile Include="Entity.cpp" />
+    <ClCompile Include="GameManager.cpp" />
+    <ClCompile Include="LevelManager.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Motion.cpp" />
+    <ClCompile Include="Munchie.cpp" />
+    <ClCompile Include="Obstacle.cpp" />
     <ClCompile Include="Pacman.cpp" />
+    <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Vector2i.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Bonus.h" />
+    <ClInclude Include="Entity.h" />
+    <ClInclude Include="GameManager.h" />
+    <ClInclude Include="LevelManager.h" />
+    <ClInclude Include="Motion.h" />
+    <ClInclude Include="Munchie.h" />
+    <ClInclude Include="Obstacle.h" />
     <ClInclude Include="Pacman.h" />
+    <ClInclude Include="Player.h" />
+    <ClInclude Include="Utilities.h" />
+    <ClInclude Include="Vector2i.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="level_0.txt" />
