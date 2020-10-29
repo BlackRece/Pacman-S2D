@@ -2,13 +2,15 @@
 
 Obstacle::Obstacle()
 {
-	this->canGhostsPass = false;
-	this->canGhostsSpawn = false;
+	canGhostsPass = false;
+	canGhostsSpawn = false;
 
-	this->canPlayerPass = false;
-	this->canPlayerSpawn = false;
+	canPlayerPass = false;
+	canPlayerSpawn = false;
 
-	this->canBonusSpawn = false;
+	canBonusSpawn = false;
+
+	mapCoords = *Vector2i::Zero;
 }
 
 Obstacle::~Obstacle()

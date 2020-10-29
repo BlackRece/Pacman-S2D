@@ -18,9 +18,3 @@ void Munchie::Draw(int frameCount) {
 		Entity::Draw(frameCount);
 	}
 }
-
-/*
-void Munchie::Update(){
-	if()
-}
-*/

@@ -40,9 +40,10 @@ LevelManager::LevelManager() {
 
 			rawRow.clear();
 		}
+
+		mapFile.close();
 	}
 
-	mapFile.close();
 }
 
 LevelManager::~LevelManager(){}
@@ -137,7 +138,7 @@ Vector2i LevelManager::GetRandomTilePos(TileType tile) {
 }
 
 bool LevelManager::IsMapTile(int row, int col, TileType tile) {
-	return this->map[row][col] == (char)tile ? true : false;
+	return (this->map[row][col] == (char)tile);
 }
 
 int LevelManager::MaxCols() { return this->maxCols; }

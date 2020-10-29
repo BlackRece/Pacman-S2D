@@ -17,6 +17,8 @@ public:
 	bool canPlayerSpawn;
 
 	bool canBonusSpawn;
+
+	Vector2i mapCoords;
 };
 
 #endif

@@ -4,7 +4,7 @@
 #define TILE_SIZE 32
 #define MAX_FRAMES 60
 #define MAX_ELEMENTS 644
-#define WWIDTH 1028
+#define WWIDTH 1184
 #define WHEIGHT 768
 #define MAP_ROWS 23
 #define MAP_COLS 27
@@ -26,10 +26,13 @@
 
 //custom game features
 #include "Player.h"
+#include "Enemy.h"
 #include "Munchie.h"
 #include "Bonus.h"
 #include "Obstacle.h"
 #include "LevelManager.h"
+#include "BillBoard.h"
+#include "HUD.h"
 
 using namespace S2D;
 
@@ -39,45 +42,52 @@ enum class GameState : unsigned int {
 	gsRunning,		// * game is running - pacman not moving?
 	gsPausing,		// game is paused - no entities are moving
 	gsStopping,		// * game is ending - destroy all objects and end
-	gsScoring		// game is showing high scores - no entities are drawn
+	gsScoring,		// game is showing high scores - no entities are drawn
+	gsDeath			// pause game while playing death animation
 };
 
 class GameManager : public Game
 {
 private:
+	//debug
+	bool debugFlag;
+
+	/* VARIABLES */
+
 	int _frameCount;
 	int _time;
 	GameState _currentState;
 
-	//data to represent player (aka PacMan)
+	/* Players */
+	//PacMan
 	const float _cPacmanSpeed;
 	const int _cPacmanFrameTime;
 
 	Player* _pacman;
-	Texture2D* _pacmanTexture;
-	//int _pacmanFrame;
-	//int _pacmanCurrentFrameTime;
 
-	//TODO: create a map class
-	//char map[MAP_ROWS][MAP_COLS];
+	//Ghosts
+	Enemy* _ghosts;
+	Texture2D* _ghostTexture;
+	
+	/* World */
 	LevelManager* _level;
 
-	//data to represent walls
+	/* Obstacles */
+	//Walls
 	Obstacle* _walls;
 	Texture2D* _wallTexture;
 
 	/* Collectables */
 
-	//data to represent munchies
+	//Munchies
 	Munchie* _munchies;
 	Texture2D* _munchieTexture;
-	int _munchieCount;		//dont need
 
-	//data to represent fruits
+	//Fruits
 	Bonus* _fruit;
-	Texture2D* _fruitTexture;
 
-	//TODO: create SoundManager class!
+	/* Music & Sound Effects */
+	bool introPlayed;
 	SoundEffect* _pop;
 	SoundEffect* _intro;
 	SoundEffect* _death;
@@ -85,15 +95,13 @@ private:
 	SoundEffect* _eatGhost;
 	SoundEffect* _nextLevel;
 
-	// Position for Strings
-	//TODO: create HUD class!
-	/*
-	Vector2* _stringPosition;
-	Vector2* _stringScore;
-	Vector2* _stringDirection;
-	*/
-
+	/* Menus & HUD */
+	BillBoard* _status;
+	HUD* _hud;
+	
 	int score;
+
+	/* METHODS */
 
 	Vector2 ApplyMovementF(Movement direction, float velocity);
 
@@ -101,29 +109,46 @@ private:
 
 	void CheckCollisions();
 
+	bool CheckMapCollision(Vector2 pos, Movement currentMove);
+
+	Movement CheckMotion(Vector2i pos, Movement nextmove, GhostType mood);
+
 	void CheckPaused(Input::KeyboardState* state, Input::Keys pauseKey, Input::Keys startKey);
 
 	void CheckViewportCollision(Rect* pos);
 
 	void DefineMap();
 
-	bool HasTargetHitObject(Rect* git, Rect* obj, float tolerance = 0, char mode = 'c');
+	Movement ForwardMotion(Vector2i pos, Movement move);
 
 	/// <summary> Called once to initialise map elements from loaded map array. </summary>
 	void InitialiseGhosts();
 
-	void InitialiseMunchies(int numOfMunchies);
+	void InitialiseMunchies();
 
-	void InitialiseWalls(int numOfWalls);
+	void InitialiseWalls();
 
 	void Input(int elapsedTime, Input::KeyboardState* state, Input::MouseState* mouseState);
 
 	bool IsPassable(Vector2i pos, Movement move, bool isPlayer);
 
-	/// <summary> Called once to load text file. </summary>
-	void LoadMap();
+	bool HasTargetHitObject(Rect* git, Rect* obj, float tolerance = 0, char mode = 'c');
 
-	void UpdatePacman(int elapsedTime);
+	Movement NotSoRandomMotion(Vector2i pos);
+
+	void ResetGame(bool nextLevel = false);
+
+	void ResetGhosts();
+
+	void ResetPlayer();
+
+	void ScareGhosts();
+
+	void UpdateGhosts(int elapsedTime = 0);
+
+	void UpdateMunchies();
+
+	void UpdatePacman(int elapsedTime = 0);
 
 public:
 	/// <summary> Constructs the Pacman class. </summary>
@@ -132,9 +157,12 @@ public:
 	/// <summary> Destroys any data associated with Pacman class. </summary>
 	virtual ~GameManager();
 
+	Movement ChaseMotion(Vector2i git, Vector2i obj);
 
 	/// <summary> Called every frame - draw game here. </summary>
 	void virtual Draw(int elapsedTime);
+
+	float DistanceToTarget(Vector2i obj, Vector2i git);
 
 	/// <summary> All content should be loaded in this method. </summary>
 	void virtual LoadContent();

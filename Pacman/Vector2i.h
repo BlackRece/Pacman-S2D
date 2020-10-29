@@ -111,6 +111,10 @@ public:
 	/// <returns>	The result of the operation. </returns>
 	const Vector2i operator/(const Vector2i& other) const;
 
+	const Vector2i operator%(const Vector2i& other) const;
+
+	const Vector2i operator%(const int& rhs) const;
+
 	/// <summary>	Multiplication operator. </summary>
 	///
 	/// <param name="other">	The other. </param>

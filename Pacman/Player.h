@@ -3,13 +3,14 @@
 
 #include "Entity.h"
 #include "Motion.h"
-#include "Vector2i.h"
 
 class Player : public Entity, virtual public Motion
 {
 private:
 	Direction facing;
-	int lives;
+	int deathCounter;
+	int deathDelay;
+	int deathFrame;
 
 	int boostDuration;
 	int boostDurationMax;
@@ -18,23 +19,27 @@ private:
 	
 public:
 	bool isBoosting;
+
 	Movement nextMove;
 	Movement currMove;
+
+	bool deathThrows;
+	int lives;
 
 	Player();
 	~Player();
 
-	Vector2* GetPosFloat();
-	Vector2i* GetPosInt();
-	void MoveBy(Vector2 velocity);
-	void SetPosInt(Vector2i newPos);
-	void SetPosFloat(Vector2 newPos);
+	bool DeathSequence();
+
 	void StartBoosting();
+
 	void StopBoosting();
 
 	void Update(int elapsedTime = 0);
+	
 	void UpdateBoost();
-	void Player::UpdateFacing();
+	
+	void UpdateFacing();
 
 };
 

@@ -9,8 +9,6 @@ private:
 	//void Update();
 
 public:
-	float offset;
-	float scale;
 	bool isPowerPellet;
 	bool isEaten;
 	int value;

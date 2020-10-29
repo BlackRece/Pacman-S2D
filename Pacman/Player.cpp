@@ -1,63 +1,72 @@
 #include "Player.h"
 
 Player::Player() {
-	this->lives = 3;
-	this->currMove = Movement::mSTOP;
-	this->nextMove = Movement::mSTOP;
-	this->facing = Direction::dLEFT;
-	this->boostDuration = 10;
-	this->boostDurationMax = 10;
-	this->boostMultiply = 2;
-	this->isBoosting = false;
-	this->SetSpeed(0);
-	this->baseSpeed = 0;
+	lives = 3;
+	deathThrows = false;
+	deathCounter = 0;
+	deathDelay = 20;
+	deathFrame = 0;
+	currMove = Movement::mSTOP;
+	nextMove = Movement::mSTOP;
+	facing = Direction::dLEFT;
+	boostDuration = 10;
+	boostDurationMax = 10;
+	boostMultiply = 2;
+	isBoosting = false;
+	SetSpeed(0);
+	baseSpeed = 0;
 }
 
 Player::~Player() {
 
 }
 
-Vector2* Player::GetPosFloat() {
-	return new Vector2(this->position->X,this->position->Y);
-}
+bool Player::DeathSequence() {
+	if (deathThrows) {
+		if (deathCounter < deathDelay) {
+			deathCounter++;
+		} else {
+			// reset counter
+			deathCounter = 0;
 
-Vector2i* Player::GetPosInt() {
-	return new Vector2i(floor(this->position->X), floor(this->position->Y));
-}
+			// select death frame animation
+			sourceRect->X = sourceRect->Width * 2;
+			sourceRect->Y = sourceRect->Height * deathFrame;
 
-void Player::MoveBy(Vector2 velocity) {
-	this->position->X += velocity.X;
-	this->position->Y += velocity.Y;
-}
+			// increment death frame
+			deathFrame++;
 
-void Player::SetPosInt(Vector2i newPos) {
-	this->position->X = newPos.X;
-	this->position->Y = newPos.Y;
-}
+			if (deathFrame > 4) {
+				// reset deathFrame counter
+				deathFrame = 0;
 
-void Player::SetPosFloat(Vector2 newPos) {
-	this->position->X = newPos.X;
-	this->position->Y = newPos.Y;
+				// finish death  sequence
+				deathThrows = false;
+			}
+		}
+	}
+
+	return deathThrows;
 }
 
 void Player::StartBoosting() {
-	if ((!this->isBoosting) && 
-		(this->boostDuration == 0))
+	if ((!isBoosting) && 
+		(boostDuration == 0))
 	{
-		this->isBoosting = true;
-		this->baseSpeed = this->GetSpeed();
-		this->SetSpeed(this->baseSpeed * this->boostMultiply);
+		isBoosting = true;
+		baseSpeed = GetSpeed();
+		SetSpeed(baseSpeed * boostMultiply);
 	} 
 		
 }
 
 void Player::StopBoosting() {
-	if ((this->isBoosting) &&
-		(this->boostDuration == 0))
+	if ((isBoosting) &&
+		(boostDuration == 0))
 	{
-		this->isBoosting = false;
-		this->SetSpeed(this->baseSpeed);
-		this->baseSpeed = 0;
+		isBoosting = false;
+		SetSpeed(baseSpeed);
+		baseSpeed = 0;
 	}
 }
 
@@ -65,38 +74,39 @@ void Player::Update(int elapsedTime) {
 	// Animation
 	Entity::Update(elapsedTime);
 
-	//TODO: Update facing direction
+	if (!deathThrows) {
+		// Update Boosting State
+		UpdateBoost();
 
-	// Update Boosting State
-	this->UpdateBoost();
+		// Update Movement
+		UpdateFacing();
+	} else {
 
-	// Update Movement
-	this->UpdateFacing();
-
+	}
 }
 
 void Player::UpdateBoost() {
-	if (this->isBoosting) {
-		if (this->boostDuration < this->boostDurationMax) {
-			this->boostDuration++;
+	if (isBoosting) {
+		if (boostDuration < boostDurationMax) {
+			boostDuration++;
 		} else {
-			this->StopBoosting();
-			this->isBoosting = false;
+			StopBoosting();
+			isBoosting = false;
 		}
 	} else {
-		if (this->boostDuration > 0) {
-			this->boostDuration--;
+		if (boostDuration > 0) {
+			boostDuration--;
 		}
 	}
 }
 
 void Player::UpdateFacing() {
 	// apply facing direction to sprite
-	if (this->facing != IsFacing(this->currMove) &&
-		IsFacing(this->currMove) != Direction::dNULL) {
-		this->facing = IsFacing(this->currMove);
+	if (facing != IsFacing(currMove) &&
+		IsFacing(currMove) != Direction::dNULL) {
+		facing = IsFacing(currMove);
 	}
 
 	// uses the order of Direction enum to determine which frame to use
-	this->sourceRect->Y = this->sourceRect->Height * (int)this->facing;
+	sourceRect->Y = sourceRect->Height * (int)facing;
 }
