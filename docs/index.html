@@ -27,10 +27,11 @@
             <nav id="nav">
                 <ul>
                     <li><a href="https://blackrece.github.io/" id="top-link"><span class="icon fa-home">Back to portfolio</span></a></li>
-                    <li><!-- space --></li>
-                    <li><a href="#demo" id="demo-link"><span class="icon fa-desktop">Assignment: PacMan Clone</span></a></li>
-                    <li><a href="#controls" id="controls-link"><span class="icon fa-gamepad">Controls</span></a></li>
-                    <li><a href="#about" id="about-link"><span class="icon fa-info">About PacMan Clone</span></a></li>
+                    <li><!-- space --><hr/></li>
+                    <li><a href="#about" id="about-link"><span class="icon fa-info">Info</span></a></li>
+                    <li><a href="#demo" id="demo-link"><span class="icon fa-desktop">Demo Video</span></a></li>
+                    <!--li><a href="#controls" id="controls-link"><span class="icon fa-gamepad">Controls</span></a></li-->
+                    
                     <li><!-- space --></li>
                     <li>
                         <a href="https://blackrece.github.io/Mario-SDL/index.html" class="image fit">
@@ -75,75 +76,24 @@
                     </div>
                 </header>
                     
-                <footer>
-                        
+                <footer class="bg">
+                    <div class="row col-12 col-12-mobile aln-center">
+                        <p class="col-8">Players take control of PacMan to collect as many pills as possible before they are captured by the infamous ghost or have used all three of their lives.</p>
+                    </div>
                 </footer>
 
             </div>
         </section>
-
-        <!-- Demo -->
-        <section id="demo" class="two">
-            <div class="container">
-
-              <div class="row">
-                <div class="col-12 col-12-mobile">
-                  <article class="item">
-
-                    <section>
-                      <img src="images/PacMan_Splash.png" alt="PacMan Clone using S2D" />
-                    </section>
-
-                    
-                  </article>
-                </div>
-
-              </div>
-
-            </div>
-        </section>
-
-        <!-- Controls -->
-        <section id="controls" class="three">
-          <div class="container">
-            <header>
-              <h2>Controls</h2>
-            </header>
-                    
-            <div>
-                <table style="text-align: center;">
-                    <thead>
-                        <td>Action</td><td colspan="2">PacMan</td>
-                    </thead>
-                    <tbody>
-                        <tr></tr>
-                        <tr><td>Move Up</td><td>W</td><td>Up Arrow</td></tr>
-                        <tr><td>Move Down</td><td>S</td><td>Down Arrow</td></tr>
-                        <tr><td>Move Left</td><td>A</td><td>Left Arrow</td></tr>
-                        <tr><td>Move Right</td><td>D</td><td>Right Arrow</td></tr>
-                        
-                    </tbody>
-                    <tfoot>
-                        <td>Quit game</td><td colspan="2">Escape</td>
-                    </tfoot>
-                </table>
-            </div>
-            
-          </div>
-        </section>
-
-        <!-- About Me -->
-        <section id="about" class="four">
+        
+        <!-- About -->
+        <section id="about" class="two">
             <div class="container">
 
                 <header>
-                    <h2>About PacMan Clone</h2>
+                    <h2>About</h2>
                 </header>
 
-                
                 <div>
-                    <h3>Summary</h3>
-                    <p>Players take control of PacMan to collect as many pills as possible before they are captured by the infamous ghost or have used all three of their lives.</p>
                     <h3>Features</h3>
                     <p>The aim was to create a PacMan-inspired clone using C++ and the S2D library as an introduction to graphical programming and game considerations. To complete this task a number of criteria had to be included which included screen management, collision detection and other game-related elements.</p>
                     <div class="row aln-center col-4">
@@ -160,6 +110,59 @@
                 </div>
             </div>
         </section>
+
+        <!-- Demo -->
+        <section id="demo" class="three">
+            <div class="container">
+
+              <div class="row">
+                <div class="col-12 col-12-mobile">
+                  <article class="item">
+
+                    <section>
+                        <img src="images/PacMan_Splash.png" alt="PacMan Clone using S2D" />
+                        <!--video width="640" height="480" controls>
+                          <source src="Pacman_playthrough.mp4" type="video/mp4">
+                          <img src="images/PacMan_Splash.png" alt="PacMan Clone using S2D" title="Sorry. Video is not supported by your browser."/>
+                        </video-->
+                    </section>
+
+                    
+                  </article>
+                </div>
+
+              </div>
+
+            </div>
+        </section>
+
+        <!-- Controls -->
+        <!--section id="controls" class="three">
+          <div class="container">
+            <header>
+              <h2>Controls</h2>
+            </header>
+                    
+            <div>
+                <table style="text-align: center;">
+                    <thead>
+                        <td>Action</td><td colspan="2">PacMan</td>
+                    </thead>
+                    <tbody>
+                        <tr><td>Move Up</td><td>W</td><td>Up Arrow</td></tr>
+                        <tr><td>Move Down</td><td>S</td><td>Down Arrow</td></tr>
+                        <tr><td>Move Left</td><td>A</td><td>Left Arrow</td></tr>
+                        <tr><td>Move Right</td><td>D</td><td>Right Arrow</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <td>Quit game</td><td colspan="2">Escape</td>
+                    </tfoot>
+                </table>
+            </div>
+            
+          </div>
+        </section-->
+
 
     </div>
 
